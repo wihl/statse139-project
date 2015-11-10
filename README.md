@@ -13,13 +13,6 @@ Current Proposal: Doing some form of regression or prediction of marathon finish
 
 [See Draft Proposal](proposal.md)
 
-Could be based on:
-
-* split times
-* previous half marathon times (assuming the data is available)
-* environmental conditions
-
-We may want to consider using either RMarkdown or an iPython notebook to keep both our code and writeup in our place. 
 
 (In David's CS109 team, we are using R with Jupyter - ping him for instructions)
 
