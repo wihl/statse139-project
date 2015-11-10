@@ -33,4 +33,7 @@ We plan to do some form of regression or prediction of marathon finish times, pe
 
 ### Challenges Faced
 
+* Getting enough training data
 * Getting sufficient half marathon data from runners
+* Finish times are not linear with regards to split times, so some form of transformation will necessary
+
