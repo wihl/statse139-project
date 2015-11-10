@@ -11,6 +11,8 @@ David Wihl davidwihl@gmail.com
 
 Current Proposal: Doing some form of regression or prediction of marathon finish times.
 
+[See Draft Proposal](proposal.md)
+
 Could be based on:
 
 * split times
