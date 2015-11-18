@@ -14,7 +14,33 @@ Current Proposal: Doing some form of regression or prediction of marathon finish
 [See Draft Proposal](proposal.md)
 
 
-(In David's CS109 team, we are using R with Jupyter - ping him for instructions)
+# Getting R to work in iPython
+
+First, install R extension
+
+```
+pip install rpy2
+```
+
+Then in the iPython notebook, reference the extension:
+
+```
+%load_ext rpy2.ipython
+```
+
+Then in a given cell
+
+```
+%R executes a single line of R
+```
+
+and
+
+```
+%%R
+# makes the whole cell into an R cell
+```
+
 
 
 # git Notes
