@@ -12,28 +12,30 @@ November 30, 2015
 
 ### Outline
 
-We plan to do some form of regression or prediction of marathon finish times, perhaps specifically the Boston Marathon.
+We plan to analyze Boston Marathon finish data for the years 2010, 2011 and 2013 in order to:
+
+* Compare strata across years such as gender or age groups 
+* Attempt to predict runners who drop out of the race based on increasing split times
+* Perform a regression to predict finish time based only on 5k split, age and gender
 
 ### Completed So Far
 
-* Set up team organization (Trello board, github repository)
-* Defined some potential data sources
-* Discussion possible regression questions:
-  * Predicting time based on split time
-  * Predicting time based on previous half marathon
-  * Predicting time based on environmental conditions
+* Set up team organization ([Trello board](https://trello.com/b/i6X6vm4s/statse139-group-project), [github repository](https://github.com/wihl/statse139-project))
+* Secure data for the three years
+* Decided on toolset (R Markdown)
+* Performed initial regressions with log and polynomial transforms
 
 
 ### Remaining To Do
 
-* Collect data
-* Decide tools (R Markdown, Jupyter, plain R)
-* Try different regression models (linear, maybe Random Forest)
+* add 1
+* add 2
+* Improve regressions by both transforms and attempting different regression models such as Random Forest
 * Write up conclusions
 
 ### Challenges Faced
 
-* Getting enough training data
-* Getting sufficient half marathon data from runners
+* add 1
+* add 2
 * Finish times are not linear with regards to split times, so some form of transformation will necessary
 
