@@ -1,0 +1,63 @@
+---
+title: "predictFinish"
+author: "David Wihl"
+date: "November 24, 2015"
+output: pdf_document
+---
+
+First let's read in the data and calculate finish times:
+
+```{r}
+dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+```
+
+Some preliminary EDA of the data:
+```{r}
+hist(dfm$totaltime,breaks=50, main="Boston Marathon Finish Time (min) Distribution for '10, '11, '13")
+```
+
+The data appears somewhat left skewed. Let's try a log transform:
+
+```{r}
+hist(log(dfm$totaltime),breaks=50, main="Boston Marathon Finish Time (log-min) Distribution for '10, '11, '13")
+```
+
+That seems better.
+
+Let's try a multiple regression on the non-log data:
+
+```{r}
+dfms = dfm[!is.na(dfm$totaltime), ]
+dfms = dfms[order(dfms$totaltime),]
+model = lm(totaltime~Age+Gender1F2M+K0.5, data=dfms)
+summary(model)
+model.resid = resid(model)
+```
+
+Let's plot the residuals
+```{r}
+plot(dfms$totaltime,model.resid,ylim=c(-100,100))
+```
+
+This appears to be spreading out and trending up. 
+
+Let's try a polynomial transformation on the 5k time to see if that improves things:
+```{r}
+bestresidsum = 9e9
+bestpoly = 0
+for (i in seq(from=1.0, to= 2.5, by=0.1)){
+  dfms$k5xform = dfms$K0.5 ^ i
+  model = lm(totaltime~Age+Gender1F2M+k5xform, data=dfms)
+  model.residsum = sum(resid(model)^2)
+  if (model.residsum < bestresidsum) {
+    bestresid = resid(model)
+    bestresidsum = model.residsum
+    bestpoly = i
+  }
+}
+
+cat("total error went from ",sum(model.resid^2), " (untransformed) to ", bestresidsum," (transformed)\n")
+plot(dfms$totaltime,bestresid,ylim=c(-100,100))
+```
