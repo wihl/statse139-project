@@ -13,6 +13,8 @@ Current Proposal: Doing some form of regression or prediction of marathon finish
 
 [See Draft Proposal](proposal.md)
 
+Regression [RMarkdown](predictfinish.Rmd) [Report](predictfinish.pdf)
+
 
 # Getting R to work in iPython
 
