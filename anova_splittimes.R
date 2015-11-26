@@ -48,5 +48,8 @@ modelr = aov(dfm.2010$totaltime ~ dfm.mean.plus.halfmar  + (dfm.2010$cummtime.20
 modelr
 plot(modelr)
 
+head(dfm.2010$totaltime)
+head(dfm.mean.plus.halfmar  + (dfm.2010$cummtime.20.40/dfm.2010$HalfMar))
+
 
 
