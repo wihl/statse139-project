@@ -54,7 +54,7 @@ dfm.age.80.plus = subset(dfm, (dfm$Age>=80))
 #hist(dfm.2010$Age, breaks=c(18, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), 
 #       main="Age Distribution for 2010", xlab="Age", freq=TRUE)
 
-#Plot histogram
+#6. Plot histogram
 plot1 = ggplot(dfm.2010, aes(x=Age)) + 
   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
@@ -71,3 +71,37 @@ suppressWarnings(suppressMessages(print(plot1)))
 #Sanity test for histogram count labels
 #length(dfm.age.18.34$BibNum[dfm.age.18.34$Year==2010])
 #length(dfm.age.75.79$BibNum[dfm.age.75.79$Year==2010])
+
+#7. Top 10% Runners - profile plot for 2010
+n.2010.male = length(dfm.2010$totaltime[dfm.2010$Gender1F2M=="2"])
+#n.2010.male
+n.2010.10pct.male = .10 * n.2010.male 
+#round(n.2010.10pct.male)
+dfm.2010.top10.male = dfm.2010[sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==2], decreasing=TRUE)[1:min(round(n.2010.10pct.male), n.2010.male)],]
+#length(dfm.2010.top10.male$totaltime)
+x.mean.times.male = c(mean(dfm.2010.top10.male$K0.5), mean(dfm.2010.top10.male$K5.10), mean(dfm.2010.top10.male$K10.15) +
+                 mean(dfm.2010.top10.male$K15.20), mean(dfm.2010.top10.male$K20.25), mean(dfm.2010.top10.male$K25.30) +
+                 mean(dfm.2010.top10.male$K30.35), mean(dfm.2010.top10.male$K35.40), mean(dfm.2010.top10.male$K40.Fin)     )
+plot(x.mean.times.male, xaxt = "n", xlab="Split Distance", ylab="Split Time", main="Top 10% Runners")
+axis(1, at=1:9, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+lines(x.mean.times.male, col="darkorange1",lwd=5)
+
+#7. Top 10% female runners - profile plot for 2010
+n.2010.female = length(dfm.2010$totaltime[dfm.2010$Gender1F2M=="1"])
+n.2010.female
+n.2010.10pct.female = .10 * n.2010.female 
+round(n.2010.10pct.female)
+dfm.2010.top10.female = dfm.2010[sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==1], decreasing=TRUE)[1:min(round(n.2010.10pct.female), n.2010.female)],]
+length(dfm.2010.top10.female$totaltime)
+x.mean.times.female = c(mean(dfm.2010.top10.female$K0.5), mean(dfm.2010.top10.female$K5.10), mean(dfm.2010.top10.female$K10.15) +
+                   mean(dfm.2010.top10.female$K15.20), mean(dfm.2010.top10.female$K20.25), mean(dfm.2010.top10.female$K25.30) +
+                   mean(dfm.2010.top10.female$K30.35), mean(dfm.2010.top10.female$K35.40), mean(dfm.2010.top10.female$K40.Fin)     )
+#plot(x.mean.times.female, xaxt = "n", xlab="Split Distance", ylab="Split Time", main="Top 10% Female Runners")
+#axis(1, at=1:9, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+lines(x.mean.times.female, pch=22, lty=2, col="green",lwd=5)
+legend("topright",c("Female","Male"), cex = 0.6, lwd=c(2.5,2.5), col=c("green", "darkorange1"))
+
+summary(x.mean.times.male)
+summary(x.mean.times.female)
+
+
