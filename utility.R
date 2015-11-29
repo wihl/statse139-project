@@ -4,7 +4,7 @@ suppressWarnings(suppressMessages(library(ggplot2)))
 fname = file.choose() 
 #fname = "/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt"
 dfm = read.csv(fname, header=T,sep=" ")
-#names(dfm)
+names(dfm)
 
 #1. Add all times
 times = as.matrix(dfm[,7:15], ncol=9)
@@ -12,12 +12,12 @@ dfm$totaltime = rowSums(times)
 
 #2. Create factor for gender
 #factor(dfm$Gender1F2M, ordered=TRUE) #identify sorted levels in input source
-dfm$gender = factor(dfm$Gender1F2M, labels=c("female", "male")) 
+dfm$gender = factor(dfm$Gender1F2M, labels=c("Female", "Male")) 
 #levels(dfm$gender) #output levels
 
 #3. Create factor for agegroup
 #factor(dfm$Age, ordered=TRUE)  #identify sorted levels in input source
-dfm$agrgroup = cut(dfm$Age, breaks=c(15, 25, 35, 45, 55, 65, 75, 85))
+dfm$agegroup = cut(dfm$Age, breaks=c(15, 25, 35, 45, 55, 65, 75, 85))
 #levels(dfm$agrgroup)
 
 #4. Split data by year
@@ -56,10 +56,16 @@ dfm.age.80.plus = subset(dfm, (dfm$Age>=80))
 
 #Plot histogram
 plot1 = ggplot(dfm.2010, aes(x=Age)) + 
-  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue") +
+  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
   labs(title="Age Distribution for 2010")
+suppressWarnings(suppressMessages(print(plot1)))
 
+plot1 = ggplot(dfm.2010, aes(x=Age)) + 
+  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
+  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
+  facet_wrap( ~ gender) +
+  labs(title="Age Distribution for 2010") 
 suppressWarnings(suppressMessages(print(plot1)))
 
 #Sanity test for histogram count labels
