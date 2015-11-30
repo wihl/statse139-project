@@ -1,10 +1,8 @@
-suppressWarnings(suppressMessages(library(ggplot2)))
-
 #Contains some utility R -cdoe
 fname = file.choose() 
 #fname = "/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt"
 dfm = read.csv(fname, header=T,sep=" ")
-names(dfm)
+#names(dfm)
 
 #1. Add all times
 times = as.matrix(dfm[,7:15], ncol=9)
@@ -45,63 +43,138 @@ dfm.age.80.plus = subset(dfm, (dfm$Age>=80))
 #length(dfm.age.18.34$BibNum) + length(dfm.age.35.39$BibNum) + length(dfm.age.40.44$BibNum) + length(dfm.age.45.49$BibNum) +
 #  length(dfm.age.50.54$BibNum) + length(dfm.age.55.59$BibNum) + length(dfm.age.60.64$BibNum) + length(dfm.age.65.69$BibNum) + 
 #  length(dfm.age.70.74$BibNum) + length(dfm.age.75.79$BibNum) + length(dfm.age.80.plus$BibNum)
-
 #length(dfm$BibNum)
-
-
 
 #Plot histogram
 #hist(dfm.2010$Age, breaks=c(18, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), 
 #       main="Age Distribution for 2010", xlab="Age", freq=TRUE)
 
 #6. Plot histogram
-plot1 = ggplot(dfm.2010, aes(x=Age)) + 
+ggplot(dfm.2010, aes(x=Age)) + 
   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
   labs(title="Age Distribution for 2010")
-suppressWarnings(suppressMessages(print(plot1)))
 
-plot1 = ggplot(dfm.2010, aes(x=Age)) + 
-  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
-  stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
-  facet_wrap( ~ gender) +
-  labs(title="Age Distribution for 2010") 
-suppressWarnings(suppressMessages(print(plot1)))
+# ggplot(dfm.2010, aes(x=Age)) + 
+#   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="bar", fill="lightblue", colour="white") +
+#   stat_bin(breaks=c(17, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 83), geom="text", cex=3.25, aes(label=..count..), vjust=-0.5) +
+#   facet_wrap( ~ gender) +
+#   labs(title="Age Distribution for 2010") 
+
 
 #Sanity test for histogram count labels
 #length(dfm.age.18.34$BibNum[dfm.age.18.34$Year==2010])
 #length(dfm.age.75.79$BibNum[dfm.age.75.79$Year==2010])
 
-#7. Top 10% Runners - profile plot for 2010
+#7. top  10% Male runners - profile plot for 2010
 n.2010.male = length(dfm.2010$totaltime[dfm.2010$Gender1F2M=="2"])
 #n.2010.male
 n.2010.10pct.male = .10 * n.2010.male 
 #round(n.2010.10pct.male)
-dfm.2010.top10.male = dfm.2010[sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==2], decreasing=TRUE)[1:min(round(n.2010.10pct.male), n.2010.male)],]
-#length(dfm.2010.top10.male$totaltime)
-x.mean.times.male = c(mean(dfm.2010.top10.male$K0.5), mean(dfm.2010.top10.male$K5.10), mean(dfm.2010.top10.male$K10.15) +
-                 mean(dfm.2010.top10.male$K15.20), mean(dfm.2010.top10.male$K20.25), mean(dfm.2010.top10.male$K25.30) +
-                 mean(dfm.2010.top10.male$K30.35), mean(dfm.2010.top10.male$K35.40), mean(dfm.2010.top10.male$K40.Fin)     )
-plot(x.mean.times.male, xaxt = "n", xlab="Split Distance", ylab="Split Time", main="Top 10% Runners")
-axis(1, at=1:9, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
-lines(x.mean.times.male, col="darkorange1",lwd=5)
+# 
+#Get sorted list of top 10% male runners based on total time
+x1.desc = sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==2], decreasing=FALSE)[1:min(round(n.2010.10pct.male), n.2010.male)]
 
-#7. Top 10% female runners - profile plot for 2010
+#Subset 2010 data based on top 10% male runners
+dfm.2010.top10.male = subset(dfm.2010, ((dfm.2010$totaltime %in% x1.desc) & (dfm.2010$Gender1F2M==2)))
+#Mean of top 10% male runners
+m1 = mean(dfm.2010.top10.male$K0.5)
+m2 = mean(dfm.2010.top10.male$K5.10)
+m3 = mean(dfm.2010.top10.male$K10.15)
+m4 = mean(dfm.2010.top10.male$K15.20)
+m5 = mean(dfm.2010.top10.male$K20.25)
+m6 = mean(dfm.2010.top10.male$K25.30)
+m7 = mean(dfm.2010.top10.male$K30.35)
+m8 = mean(dfm.2010.top10.male$K35.40)
+m9 = mean(dfm.2010.top10.male$K40.Fin)
+
+x.mean.times.top.male = c(m1, m2, m3, m4, m5, m6, m7, m8, m9)
+plot(x.mean.times.top.male, xaxt = "n", yaxt='n', ylim = c(9,24), xlab="Split Distance", ylab="Split Time", main="Top 10% Runners")
+axis(1, at=1:9, cex.axis=0.6, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+axis(2, at=9:24, cex.axis=0.6, labels=c(9:24)) 
+lines(x.mean.times.top.male, col="darkorange1",lwd=5)
+
+# top  10% Female runners - profile plot for 2010
 n.2010.female = length(dfm.2010$totaltime[dfm.2010$Gender1F2M=="1"])
-n.2010.female
+#n.2010.female
 n.2010.10pct.female = .10 * n.2010.female 
-round(n.2010.10pct.female)
-dfm.2010.top10.female = dfm.2010[sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==1], decreasing=TRUE)[1:min(round(n.2010.10pct.female), n.2010.female)],]
-length(dfm.2010.top10.female$totaltime)
-x.mean.times.female = c(mean(dfm.2010.top10.female$K0.5), mean(dfm.2010.top10.female$K5.10), mean(dfm.2010.top10.female$K10.15) +
-                   mean(dfm.2010.top10.female$K15.20), mean(dfm.2010.top10.female$K20.25), mean(dfm.2010.top10.female$K25.30) +
-                   mean(dfm.2010.top10.female$K30.35), mean(dfm.2010.top10.female$K35.40), mean(dfm.2010.top10.female$K40.Fin)     )
-#plot(x.mean.times.female, xaxt = "n", xlab="Split Distance", ylab="Split Time", main="Top 10% Female Runners")
-#axis(1, at=1:9, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
-lines(x.mean.times.female, pch=22, lty=2, col="green",lwd=5)
+#round(n.2010.10pct.female)
+#Get sorted list of top 10% female runners based on total time
+x1.desc = sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==1], decreasing=FALSE)[1:min(round(n.2010.10pct.female), n.2010.female)]
+
+#Subset 2010 data based on top 10% female runners
+dfm.2010.top10.female = subset(dfm.2010, ((dfm.2010$totaltime %in% x1.desc) & (dfm.2010$Gender1F2M==1)))
+
+#Mean of top 10% female runners
+m1 = mean(dfm.2010.top10.female$K0.5)
+m2 = mean(dfm.2010.top10.female$K5.10)
+m3 = mean(dfm.2010.top10.female$K10.15)
+m4 = mean(dfm.2010.top10.female$K15.20)
+m5 = mean(dfm.2010.top10.female$K20.25)
+m6 = mean(dfm.2010.top10.female$K25.30)
+m7 = mean(dfm.2010.top10.female$K30.35)
+m8 = mean(dfm.2010.top10.female$K35.40)
+m9 = mean(dfm.2010.top10.female$K40.Fin)
+
+x.mean.times.top.female = c(m1, m2, m3, m4, m5, m6, m7, m8, m9)
+axis(1, at=1:9, cex.axis=0.6, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+lines(x.mean.times.top.female, pch=22, lty=2, col="green",lwd=5)
 legend("topright",c("Female","Male"), cex = 0.6, lwd=c(2.5,2.5), col=c("green", "darkorange1"))
 
-summary(x.mean.times.male)
-summary(x.mean.times.female)
+#8. Bottom 10% Runners - profile plot for 2010
+#Get sorted list of bottom 10% male runners based on total time
+x1 = sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==2], decreasing=TRUE)[1:min(round(n.2010.10pct.male), n.2010.male)]
+
+#Subset 2010 data based on bottom 10% male runners
+dfm.2010.bottom10.male = subset(dfm.2010, ((dfm.2010$totaltime %in% x1) & (dfm.2010$Gender1F2M==2)))
+
+#Mean of bottom 10% male runners
+m1 = mean(dfm.2010.bottom10.male$K0.5)
+m2 = mean(dfm.2010.bottom10.male$K5.10)
+m3 = mean(dfm.2010.bottom10.male$K10.15)
+m4 = mean(dfm.2010.bottom10.male$K15.20)
+m5 = mean(dfm.2010.bottom10.male$K20.25)
+m6 = mean(dfm.2010.bottom10.male$K25.30)
+m7 = mean(dfm.2010.bottom10.male$K30.35)
+m8 = mean(dfm.2010.bottom10.male$K35.40)
+m9 = mean(dfm.2010.bottom10.male$K40.Fin)
+
+x.mean.times.bottom.male = c(m1, m2, m3, m4, m5, m6, m7, m8, m9)
+plot(x.mean.times.bottom.male, xaxt="n", xlab="Split Distance", ylab="Split Time", main="Bottom 10% Runners")
+axis(1, at=1:9, cex.axis=0.6, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+lines(x.mean.times.bottom.male, col="darkorange1",lwd=5)
+
+#8. bottom 10% female runners - profile plot for 2010
+x2 = sort(dfm.2010$totaltime[dfm.2010$Gender1F2M==1], decreasing=TRUE)[1:min(round(n.2010.10pct.female), n.2010.female)]
+dfm.2010.bottom10.female = subset(dfm.2010, ((dfm.2010$totaltime %in% x2) & (dfm.2010$Gender1F2M==1)))
+
+#Mean of bottom 10% female runners
+m1 = mean(dfm.2010.bottom10.female$K0.5)
+m2 = mean(dfm.2010.bottom10.female$K5.10)
+m3 = mean(dfm.2010.bottom10.female$K10.15)
+m4 = mean(dfm.2010.bottom10.female$K15.20)
+m5 = mean(dfm.2010.bottom10.female$K20.25)
+m6 = mean(dfm.2010.bottom10.female$K25.30)
+m7 = mean(dfm.2010.bottom10.female$K30.35)
+m8 = mean(dfm.2010.bottom10.female$K35.40)
+m9 = mean(dfm.2010.bottom10.female$K40.Fin)
+
+x.mean.times.bottom.female = c(m1, m2, m3, m4, m5, m6, m7, m8, m9)
+axis(1, at=1:9, cex.axis=0.6, labels=c("K0.5","K5.10","K10.15","K15.20","K20.25","K25.30","K30.35","K35.40","K40.Fin")) 
+lines(x.mean.times.bottom.female, pch=22, lty=2, col="green",lwd=5)
+legend("topright",c("Female","Male"), cex = 0.6, lwd=c(2.5,2.5), col=c("green", "darkorange1"))
+
+#summary(x.mean.times.male)
+#summary(x.mean.times.female)
+#length(dfm.2010.bottom10.male$totaltime)
+#unique(dfm.2010.bottom10.male$Gender1F2M)
+
+
+###
+#summary(dfm.2010.top10.male$totaltime)
+#summary(dfm.2010.top10.female$totaltime)
+#summary(dfm.2010.bottom10.male$totaltime)
+#summary(dfm.2010.bottom10.female$totaltime)
+
 
 
