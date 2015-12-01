@@ -14,6 +14,7 @@ dfm$totaltime <- rowSums(times)
 
 #3. Factor Age
 dfm$agegroup <- (cut(dfm$Age, breaks=c(18, 35, 55, 85)))
+levels(dfm$agegroup)
 factor(dfm$agegroup, labels=c("Young", "Middle-age", "Plus-years"))
 head(paste(dfm$agegroup,dfm$Age))
 dfm$agegroup <- factor(dfm$agegroup, labels=c(1,2,3))
@@ -62,8 +63,7 @@ table(dfm.2010.byage$agegroup, kc$cluster)
 
 #Plot the cluster 
 plot(dfm.2010.byage.new[c("K0.5","totaltime")], col=kc$cluster, main="Cluster of K0.5 ~ TotalTime by AgeGroup", ylab="Total Time")
-legend("topright", legend=paste("AgeGroup", 1:3), cex = 0.6, lwd=c(1.5,1.5,1.5), col=1:3, xpd = TRUE)
-
+legend("topright", legend=c("Age (18,35]","Age (35,55]","Age (55,85]"), cex = 0.6, lwd=c(1.5,1.5,1.5), col=1:3, xpd = TRUE)
 
 #A Standardize variables
 # dfm.2010.scaled <- data.frame(dfm.2010[1:6],scale(dfm.2010[7:16]),dfm.2010[17:18], scale(dfm.2010[19])) # standardize variables
