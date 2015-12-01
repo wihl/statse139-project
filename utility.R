@@ -24,6 +24,34 @@ dfm.2010 <- subset(dfm, (dfm$Year==2010))
 dfm.2011 <- subset(dfm, (dfm$Year==2011))
 dfm.2013 <- subset(dfm, (dfm$Year==2013))
 
+#Summary statistics
+attach(dfm.2010)
+summarystats.2010 <- cbind(by(K0.5,Gender1F2M,mean), by(K5.10,Gender1F2M,mean), by(K10.15,Gender1F2M,mean), +
+                          by(K15.20,Gender1F2M,mean), by(K20.25,Gender1F2M,mean), by(K25.30,Gender1F2M,mean), +
+                          by(K30.35,Gender1F2M,mean), by(K35.40,Gender1F2M,mean), by(K40.Fin,Gender1F2M,mean))
+summarystats.2010
+detach(dfm.2010)
+
+attach(dfm.2011)
+summarystats.2011 <- cbind(by(K0.5,Gender1F2M,mean), by(K5.10,Gender1F2M,mean), by(K10.15,Gender1F2M,mean), +
+                          by(K15.20,Gender1F2M,mean), by(K20.25,Gender1F2M,mean), by(K25.30,Gender1F2M,mean), +
+                          by(K30.35,Gender1F2M,mean), by(K35.40,Gender1F2M,mean), by(K40.Fin,Gender1F2M,mean))
+summarystats.2011
+detach(dfm.2011)
+
+attach(dfm.2013)
+summarystats.2013 <- cbind(by(K0.5[!is.na(K0.5)],Gender1F2M[!is.na(K0.5)],mean), +
+                        by(K5.10[!is.na(K5.10)],Gender1F2M[!is.na(K5.10)],mean), +
+                        by(K10.15[!is.na(K10.15)],Gender1F2M[!is.na(K10.15)],mean), +
+                        by(K15.20[!is.na(K15.20)],Gender1F2M[!is.na(K15.20)],mean), +
+                        by(K20.25[!is.na(K20.25)],Gender1F2M[!is.na(K20.25)],mean), +
+                        by(K25.30[!is.na(K25.30)],Gender1F2M[!is.na(K25.30)],mean), +
+                        by(K30.35[!is.na(K30.35)],Gender1F2M[!is.na(K30.35)],mean), +
+                        by(K35.40[!is.na(K35.40)],Gender1F2M[!is.na(K35.40)],mean), +
+                        by(K40.Fin[!is.na(K40.Fin)],Gender1F2M[!is.na(K40.Fin)],mean))
+summarystats.2013
+detach(dfm.2013)
+
 #Sanity test for year subset
 #length(dfm.2010$BibNum) + length(dfm.2011$BibNum) + length(dfm.2013$BibNum)
 
@@ -157,6 +185,5 @@ detach(dfm.2010.bottom10.female)
 #summary(dfm.2010.top10.female$totaltime)
 #summary(dfm.2010.bottom10.male$totaltime)
 #summary(dfm.2010.bottom10.female$totaltime)
-
 
 
