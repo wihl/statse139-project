@@ -62,8 +62,9 @@ kc
 table(dfm.2010.byage$agegroup, kc$cluster)
 
 #Plot the cluster 
+par(xpd=T, mar=par()$mar+c(0,0,0,5))
 plot(dfm.2010.byage.new[c("K0.5","totaltime")], col=kc$cluster, main="Cluster of K0.5 ~ TotalTime by AgeGroup", ylab="Total Time")
-legend("topright", legend=c("Age (18,35]","Age (35,55]","Age (55,85]"), cex = 0.6, lwd=c(1.5,1.5,1.5), col=1:3, xpd = TRUE)
+legend("topright", inset=c(-0.35,0), legend=c("Age (18,35]","Age (35,55]","Age (55,85]"), cex = 0.6, lwd=c(1.5,1.5,1.5), col=1:3,xpd=TRUE)
 
 #A Standardize variables
 # dfm.2010.scaled <- data.frame(dfm.2010[1:6],scale(dfm.2010[7:16]),dfm.2010[17:18], scale(dfm.2010[19])) # standardize variables
