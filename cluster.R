@@ -1,3 +1,6 @@
+install.packages("useful")
+library(ggplot2)
+
 #1. Read input data
 fname <- file.choose() 
 #fname = "/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt"
@@ -11,7 +14,8 @@ dfm$totaltime <- rowSums(times)
 
 #3. Factor Age
 dfm$agegroup <- (cut(dfm$Age, breaks=c(18, 35, 55, 85)))
-#factor(dfm$agegroup, labels=c("Young", "Middle-age", "Plus-years"))
+factor(dfm$agegroup, labels=c("Young", "Middle-age", "Plus-years"))
+head(paste(dfm$agegroup,dfm$Age))
 dfm$agegroup <- factor(dfm$agegroup, labels=c(1,2,3))
 levels(dfm$agegroup)
 #is.numeric(as.numeric(dfm$agegroup))
@@ -20,6 +24,14 @@ levels(dfm$agegroup)
 dfm.2010 <- subset(dfm, (dfm$Year==2010))
 dfm.2011 <- subset(dfm, (dfm$Year==2011))
 dfm.2013 <- subset(dfm, (dfm$Year==2013))
+
+#total time by agegroup
+dfm.2010.1 = subset(dfm.2010, (dfm.2010$agegroup==1))
+dfm.2010.2 = subset(dfm.2010, (dfm.2010$agegroup==2))
+dfm.2010.3 = subset(dfm.2010, (dfm.2010$agegroup==3))
+mean(dfm.2010.1$totaltime)
+mean(dfm.2010.2$totaltime)
+mean(dfm.2010.3$totaltime)
 
 #5 Summary statistics
 attach(dfm.2010)
@@ -49,8 +61,9 @@ kc
 table(dfm.2010.byage$agegroup, kc$cluster)
 
 #Plot the cluster 
-plot(dfm.2010.byage.new[c("K0.5","totaltime")], col=kc$cluster, main="Cluster of K0.5 ~ TotalTime by AgeGroup")
-legend("topright",c("18-35","35-55","55-85"), cex = 0.6, lwd=c(2.5,2.5,2.5), col=c("red", "black", "green"))
+plot(dfm.2010.byage.new[c("K0.5","totaltime")], col=kc$cluster, main="Cluster of K0.5 ~ TotalTime by AgeGroup", ylab="Total Time")
+legend("topright", legend=paste("AgeGroup", 1:3), cex = 0.6, lwd=c(1.5,1.5,1.5), col=1:3, xpd = TRUE)
+
 
 #A Standardize variables
 # dfm.2010.scaled <- data.frame(dfm.2010[1:6],scale(dfm.2010[7:16]),dfm.2010[17:18], scale(dfm.2010[19])) # standardize variables
