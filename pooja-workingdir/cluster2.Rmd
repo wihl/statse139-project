@@ -1,0 +1,36 @@
+---
+title: "Clustering Analysis"
+output: pdf_document
+---
+
+K-means clustering is a simple method for partioning a dataset into K distinct clusters. In order to find clusters between total time for runnnig a marathon and time to run first five kilometers, we used R to generate clusters using kmeans function. We set the number of clusters to be k=3 inside the kmeans function. We created a data frame that contains total time and time to run first five kilometers for 2010 and passed it as a parameter to kmeans function. We plotted the clusters as there are only two variables. 
+
+kc <- kmeans(df, k=3, nstart=20)
+plot(df, col=kc$cluster, xlab="K0-5 Split-time", ylab="Total Time", main="Clusters using kmeans")
+
+
+
+```{r, echo=FALSE}
+#1. Read input data
+#fname <- file.choose() 
+fname <- "/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt"
+dfm <- read.csv(fname, header=T,sep=" ")
+
+#2. Add all times
+times <- as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime <- rowSums(times)
+
+#3. Split data by year
+dfm.2010 <- subset(dfm, (dfm$Year==2010))
+dfm.2011 <- subset(dfm, (dfm$Year==2011))
+dfm.2013 <- subset(dfm, (dfm$Year==2013))
+
+#4. Cluster of TotalTime and K0.5 for 2010
+df <- data.frame(dfm.2010$K0.5, dfm.2010$totaltime)
+#nstart arguments suggests the number of kmeans clustering that is performed using multipe random assignments in the begining
+kc <- kmeans(df, 3, nstart=20)
+plot(df, col=kc$cluster, xlab="K0-5 Split-time", ylab="Total Time", main="Clusters using kmeans for 2010")
+legend("topright", legend = kc$size, lwd=c(1.5,1.5,1.5),cex = 0.8, col=c(3,2,1))
+```
+
+For further clustering analysis for more than two variables, we would perform PCA and plot the first two principal components score. vectors. 
