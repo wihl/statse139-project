@@ -1,0 +1,154 @@
+---
+title: "Boston Marathon Finish Time Predictions"
+subtitle: "Harvard Stats E139 Fall 2015"
+author: 
+- Nathaniel Burbank
+- Pooja Singh
+- David Wihl
+date: "December 21, 2015"
+abstract: |
+    We want to build a reasonably accurate model for predicting Boston Marathon finish times based on gender, age on 5k split times. We will build a baseline using untransformed linear regression. Then, we will analyze the data and perform appropriate transformations. After transforming the data, we will cluster the data into different subgroups using unsupervised learning algorithms. Finally, we will run different regression algorithms on the transformed and subsetted data to see our improvements over the baseline.
+output: pdf_document
+---
+
+## Baseline
+
+We obtained the following data: _fill in here_
+
+First let's read in the data and calculate finish times:
+
+```{r}
+dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+dfm = dfm[!is.na(dfm$totaltime), ]
+```
+
+## Step 1: Baseline Regression
+
+```{r}
+base.mod = lm(totaltime~Age+Gender1F2M+K0.5,data=dfm)
+summary(base.mod)
+```
+
+Our baseline mean error is `r sqrt(mean(base.mod$residuals^2))`, or approximately 15 minutes.
+
+```{r}
+y.hat = predict(base.mod)
+xydata = data.frame(x=y.hat, y=resid(base.mod))
+xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
+plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+
+```
+
+## Step 2: Examination of the data and transformations.
+
+Some preliminary EDA of the data:
+```{r}
+hist(dfm$totaltime,breaks=50, main="Boston Marathon Finish Time (min) Distribution for '10, '11, '13")
+```
+
+The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
+
+```{r}
+hist(log(dfm$totaltime),breaks=50, main="Boston Marathon Finish Time (log-min) Distribution for '10, '11, '13")
+```
+
+That seems better.
+
+Let's try a multiple regression on the log transformed data:
+
+```{r}
+tx.mod = lm(log(totaltime)~Age+Gender1F2M+K0.5, data=dfm)
+summary(tx.mod)
+```
+
+Our transformed mean error is `r sqrt(mean(exp(tx.mod$residuals)^2))`
+
+**NOTE: I know this is wrong :) **
+
+Let's plot the residuals vs predicted
+```{r}
+#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
+y.hat = predict(tx.mod)
+xydata = data.frame(x=y.hat, y=exp(resid(tx.mod)))
+xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
+plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+```
+
+This appears to be spreading out and trending up. 
+
+Let's try a polynomial transformation on the 5k time to see if that improves things:
+```{r}
+#bestresidsum = 9e9
+#bestpoly = 0
+#for (i in seq(from=1.0, to= 2.5, by=0.1)){
+#  dfms$k5xform = dfms$K0.5 ^ i
+#  model = lm(totaltime~Age+Gender1F2M+k5xform, data=dfms)
+#  model.residsum = sum(resid(model)^2)
+# if (model.residsum < bestresidsum) {
+#    bestresid = resid(model)
+#    bestresidsum = model.residsum
+#    bestpoly = i
+#  }
+#}
+
+#cat("total error went from ",sum(model.resid^2), " (untransformed) to ", bestresidsum," (transformed)\n")
+#plot(dfms$totaltime,bestresid,ylim=c(-100,100))
+#xydata = data.frame(x=dfms$totaltime, y=bestresid)
+#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
+#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="total time(min)", ylab="Residuals")
+
+```
+
+## Step 3: Clustering the Data into Subgroups
+
+Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+
+**Note to Pooja and Nathaniel: I'm using the untransformed data set because the transformation part is not complete. When we've completed the transformations, we'll change this to use the transformed data.**
+
+```{r}
+# Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
+columnstokeep <- c("totaltime","Age","Gender1F2M","K0.5")
+dfm2<- dfm[columnstokeep]
+
+# Warning: using NbClust never finished even when I tried 2-4 instead of 2-15 clusters.
+# install.packages("NbClust")
+#library(NbClust)
+#nc <- NbClust(data=dfm2,
+#              min.nc=2, max.nc=4,
+#              method="kmeans")
+#barplot(table(nc$Best.n[1,]),
+#        xlab="Numer of Clusters",
+#        ylab="Number of Criteria",
+#        main="Number of Clusters Chosen by 26 Criteria")
+
+
+for (num_clusters in c(4,8,10,20)) {
+  fit.km <- kmeans(dfm2, num_clusters)
+
+
+  cluster.resid = c()
+
+  cat ("Number of clusters:",num_clusters,"\n")
+  for (i in 1:num_clusters){
+    df = dfm2[ fit.km$cluster == i, ]
+    mod = lm(totaltime~Age+Gender1F2M+K0.5,data=df)
+    cluster.resid[i] = sqrt(mean(mod$residuals^2))
+    cat("For cluster ",i," the mean error is ", cluster.resid[i], "\n")
+  }
+  cat ("Mean error rate overall:", mean(cluster.resid),"\n\n")
+}
+# Warning: this takes awhile to run because it includes all data points
+# install.packages("fpc")
+library(fpc)
+plotcluster(dfm2, fit.km$cluster)
+```
+
+**Note: as you can see, the unsupervised learning found groupings that would have difficult if not
+impossible to us to find on our own**
+
+## Conclusion
+
+By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model...
+
