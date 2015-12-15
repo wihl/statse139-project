@@ -7,68 +7,43 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-    We want to build a reasonably accurate model for predicting Boston Marathon finish times based on gender, age on 5k split times. We will build a baseline using untransformed linear regression. Then, we will analyze the data and perform appropriate transformations. After transforming the data, we will cluster the data into different subgroups using unsupervised learning algorithms. Finally, we will run different regression algorithms on the transformed and subsetted data to see our improvements over the baseline.
+    This module contains the base code for the project.
 output: pdf_document
 ---
 
-## Baseline
-
-We obtained the following data: _fill in here_
-
-First let's read in the data and calculate finish times:
-
 ```{r}
+# First let's read in the data and calculate finish times:
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm = dfm[!is.na(dfm$totaltime), ]
-```
 
-## Step 1: Baseline Regression
-
-```{r}
+# Baseline regression
 base.mod = lm(totaltime~Age+Gender1F2M+K0.5,data=dfm)
 summary(base.mod)
-```
+cat ("Baseline mean error is ",mean(base.mod$residuals^2),
+    " or approximately 15 minutes.\n")
 
-Our baseline mean error is `r sqrt(mean(base.mod$residuals^2))`, or approximately 15 minutes.
-
-```{r}
 y.hat = predict(base.mod)
 xydata = data.frame(x=y.hat, y=resid(base.mod))
 xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
 plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
 
-```
-
 ## Step 2: Examination of the data and transformations.
-
-Some preliminary EDA of the data:
-```{r}
 hist(dfm$totaltime,breaks=50, main="Boston Marathon Finish Time (min) Distribution for '10, '11, '13")
-```
 
-The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
-
-```{r}
+#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 hist(log(dfm$totaltime),breaks=50, main="Boston Marathon Finish Time (log-min) Distribution for '10, '11, '13")
-```
 
-That seems better.
+# That seems better.
 
-Let's try a multiple regression on the log transformed data:
+# Let's try a multiple regression on the log transformed data:
 
-```{r}
 tx.mod = lm(log(totaltime)~Age+Gender1F2M+K0.5, data=dfm)
 summary(tx.mod)
-```
 
-Our transformed mean error is `r sqrt(mean(exp(tx.mod$residuals)^2))`
+cat("Our transformed mean error is ",sqrt(mean(exp(tx.mod$residuals)^2)),"\n")
 
-**NOTE: I know this is wrong :) **
-
-Let's plot the residuals vs predicted
-```{r}
 #plot(dfms$totaltime,model.resid,ylim=c(-100,100))
 y.hat = predict(tx.mod)
 xydata = data.frame(x=y.hat, y=exp(resid(tx.mod)))
@@ -141,8 +116,8 @@ for (num_clusters in c(4,8,10,20)) {
 }
 # Warning: this takes awhile to run because it includes all data points
 # install.packages("fpc")
-library(fpc)
-plotcluster(dfm2, fit.km$cluster)
+#library(fpc)
+#plotcluster(dfm2, fit.km$cluster)
 ```
 
 **Note: as you can see, the unsupervised learning found groupings that would have difficult if not

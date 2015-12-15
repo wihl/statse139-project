@@ -23,7 +23,6 @@ First let's read in the data and calculate finish times:
 Our baseline mean error is _whatever_, or approximately 15 minutes.
 
 
-
 ## Step 2: Examination of the data and transformations.
 
 Some preliminary EDA of the data:

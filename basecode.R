@@ -1,18 +1,35 @@
+# First let's read in the data and calculate finish times:
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm = dfm[!is.na(dfm$totaltime), ]
+
+# Baseline regression
 base.mod = lm(totaltime~Age+Gender1F2M+K0.5,data=dfm)
 summary(base.mod)
+cat ("Baseline mean error is ",mean(base.mod$residuals^2),
+    " or approximately 15 minutes.\n")
+
 y.hat = predict(base.mod)
 xydata = data.frame(x=y.hat, y=resid(base.mod))
 xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
 plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
 
+## Step 2: Examination of the data and transformations.
 hist(dfm$totaltime,breaks=50, main="Boston Marathon Finish Time (min) Distribution for '10, '11, '13")
+
+#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 hist(log(dfm$totaltime),breaks=50, main="Boston Marathon Finish Time (log-min) Distribution for '10, '11, '13")
+
+# That seems better.
+
+# Let's try a multiple regression on the log transformed data:
+
 tx.mod = lm(log(totaltime)~Age+Gender1F2M+K0.5, data=dfm)
 summary(tx.mod)
+
+cat("Our transformed mean error is ",sqrt(mean(exp(tx.mod$residuals)^2)),"\n")
+
 #plot(dfms$totaltime,model.resid,ylim=c(-100,100))
 y.hat = predict(tx.mod)
 xydata = data.frame(x=y.hat, y=exp(resid(tx.mod)))
@@ -70,5 +87,5 @@ for (num_clusters in c(4,8,10,20)) {
 }
 # Warning: this takes awhile to run because it includes all data points
 # install.packages("fpc")
-library(fpc)
-plotcluster(dfm2, fit.km$cluster)
+#library(fpc)
+#plotcluster(dfm2, fit.km$cluster)
