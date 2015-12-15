@@ -1,0 +1,72 @@
+---
+title: "Boston Marathon Finish Time Predictions"
+subtitle: "Harvard Stats E139 Fall 2015"
+author: 
+- Nathaniel Burbank
+- Pooja Singh
+- David Wihl
+date: "December 21, 2015"
+abstract: |
+    We want to build a reasonably accurate model for predicting Boston Marathon finish times based on gender, age on 5k split times. We will build a baseline using untransformed linear regression. Then, we will analyze the data and perform appropriate transformations. After transforming the data, we will cluster the data into different subgroups using unsupervised learning algorithms. Finally, we will run different regression algorithms on the transformed and subsetted data to see our improvements over the baseline.
+output: pdf_document
+---
+
+## Baseline
+
+We obtained the following data: _fill in here_
+
+First let's read in the data and calculate finish times:
+
+
+## Step 1: Baseline Regression
+
+Our baseline mean error is _whatever_, or approximately 15 minutes.
+
+
+
+## Step 2: Examination of the data and transformations.
+
+Some preliminary EDA of the data:
+
+The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
+
+
+That seems better.
+
+Let's try a multiple regression on the log transformed data:
+
+
+Our transformed mean error is 
+
+**NOTE: I know this is wrong :) **
+
+Let's plot the residuals vs predicted
+
+This appears to be spreading out and trending up. 
+
+Let's try a polynomial transformation on the 5k time to see if that improves things:
+
+## Step 3: Clustering the Data into Subgroups
+
+Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+
+
+
+**Note: as you can see, the unsupervised learning found groupings that would have difficult if not
+impossible to us to find on our own**
+
+## Conclusion
+
+By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model...
+
+# Appendix A - Code
+
+The following is the code used to prepare this report:
+```{r code=readLines(knitr::purl('basecode.Rmd', documentation = 0)), eval = FALSE}
+
+```
+
+# Appendix B - References
+
+[Place R Code in Appendix](http://stackoverflow.com/questions/33485893/create-appendix-with-r-code-in-rmarkdown-knitr)
+
