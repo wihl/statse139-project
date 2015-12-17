@@ -13,7 +13,8 @@ output: pdf_document
 
 ## Baseline
 
-We obtained the following data: _fill in here_
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for 69923 runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
+
 
 First let's read in the data and calculate finish times:
 
