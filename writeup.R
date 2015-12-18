@@ -110,7 +110,6 @@ score.mean = mean(score)
 
 # Clustering the Data into Subgroups
 # Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
-# Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
 
 minclusters = 3
 maxclusters = 20

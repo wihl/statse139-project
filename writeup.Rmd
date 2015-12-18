@@ -76,9 +76,8 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 Boston Marathon Runners are very concerned about their finish times, moreso than many other races. Boston has a limited course size,
 constrainted by the 30' width of road in Hopkington, MA ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)).
-Due to the limitation, Boston has to be very selective in the choice of runners and has put restrictive qualifying times in order
-to run the marathon ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
-the Boston Marathon, not only does an applicant had to have run a previous qualifying marathon, the candidate must also had to finish
+Due to this limitation, the B.A.A. has to be very selective in the choice of runners and has established restrictive qualifying times ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
+the Boston Marathon, not only does an applicant need to run a previous qualifying marathon, but must also finish
 much faster than the typical marathoner. While other races like New York and Chicago have increased their participation size significantly
 in recent years, Boston is currently and the foreseeable future restricted to approximately 27,000 runners.
 
@@ -102,7 +101,7 @@ Boston(**)              `r men`             `r women`
 (**) See Data Sources, below
 
 Boston is also known as a hilly course so a candidate who may have run a fast race on a flat course would be challenged by New England's
-rolling hills, especally between miles 16-21, which is among the most difficult of the course. The peak of course is affectionately known
+rolling hills, especally between miles 16-21, which are among the most difficult of the course. The peak is affectionately known
 as Heartbreak Hill.
 
 For all these reasons plus the long history of the race, the Boston Marathon is a very prestigious event in the running community. 
@@ -111,7 +110,7 @@ a marathon requires.
 
 ## Data Sources
 
-We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data set contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data set contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom Python scraper. 
 
 ## Methodology
 
@@ -124,7 +123,7 @@ infer or analyze the data extensively. Our method consists of the following step
 1. Cluster the data into subgroups using unsupervised learning, such as $k$-means
 1. Verify the improved accuracy of our predictions.
 
-Throughout we will be using 10-fold cross validation testing with sum of squares errors as the metric to improve.
+Throughout we will be using 10-fold cross validation testing with sum of squares errors as the key quality metric.
 
 ## Data Cleansing
 
@@ -191,7 +190,7 @@ it makes a significant difference in terms of ability to qualify for Boston.
 
 ## Examination of the Data and Transformations
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.height=2.5}
 # Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
@@ -200,15 +199,15 @@ hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (mi
 
 The untransformed data appears slightly right skewed. A log transformation of the response variable would result in a more normal distribution.
 
-We then examined the base model standard diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
+We then examined the base model regression diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
 
-```{r echo=FALSE,fig.height=6,fig.width=6}
+```{r echo=FALSE,fig.height=5,fig.width=6}
 par(mfrow=c(2,2))
 plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
 
 Given the right tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right skewness of the finish time histogram,
-we elected to perform a log transform of the response variable.
+we elected to perform a log transformation of the response variable.
 
 
 ```{r echo=FALSE}
@@ -234,7 +233,7 @@ score.mean = mean(score)
 Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)`
 or approximately `r as.integer(sqrt(score.mean))` minutes, a neglible improvement.
 
-$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equal amount.
+$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equally small amount.
 
 We also attempted a range of polynominal transformations of the 5K time using an exponent in the range [1.0,2.5] but this did not improve model accuracy
 significantly. For report brevity, these results have been omitted but are available upon request (and can be found in the project GitHub site - See Appendix B).
@@ -244,7 +243,6 @@ significantly. For report brevity, these results have been omitted but are avail
 ```{r echo=FALSE,warning=FALSE, message=FALSE}
 # Clustering the Data into Subgroups
 # Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
-# Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
 
 minclusters = 3
 maxclusters = 20
@@ -271,7 +269,8 @@ for (num_clusters in minclusters:maxclusters) {
 }
 ```
 
-Since the transformation yielded only a small improvement, we elected to try clustering the data into subgroups using $k$-Means.
+Since the transformation yielded only a small improvement, we elected to try clustering the data into subgroups using $k$-Means. We attempted
+$k = [`r minclusters`,`r maxclusters`]$.
 
 By clustering, the resulting error rates decreased significantly. Using $k=3$, the mean error rate was `r as.integer(overallclustererror[1])` or $\pm$ 
 `r as.integer(sqrt(overallclustererror[1]))` min. At $k=20$, the mean error rate was `r as.integer(overallclustererror[maxclusters - minclusters + 1])`
@@ -300,10 +299,12 @@ impossible to us to find on our own.
 
 ## Conclusion and Next Steps
 
-By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model.
+By subsetting the data, we were able to bring down the cross validation error significantly and improve the accuracy of the model.
 
 Potential next steps of this project include:
 
+* Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)).
+* Attempt other algorithms of regression, such as Random Forests.
 * Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
 accurate than what is currently available to runners.
 
@@ -319,9 +320,11 @@ The following is the code used to prepare this report:
 
 This entire project code including source data can be found on GitHub ([https://github.com/wihl/statse139-project](https://github.com/wihl/statse139-project))
 
+[K-Means Clustering in R Sample Code](https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/)
+
 ### R Packages Used
 
-**fpc** used to plot clusters
+[fpc](https://cran.r-project.org/web/packages/fpc/fpc.pdf) used to plot clusters
 
 ### Solutions Found on StackOverflow
 
