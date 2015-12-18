@@ -37,7 +37,7 @@ Let's try a multiple regression on the log transformed data:
 
 Our transformed mean error is 
 
-**NOTE: I know this is wrong :) **
+
 
 Let's plot the residuals vs predicted
 
