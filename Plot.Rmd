@@ -1,0 +1,107 @@
+---
+title: "Plot"
+output: pdf_document
+---
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#################CODE from BASE###########
+dfm <- read.csv("/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
+
+#Baseline regression
+base.mod = lm(totaltime~.,data=dfm)
+#summary(base.mod)
+```
+Using base regression model \textbf{lm(totaltime $\sim$ Age+Gender1F2M+K0.5)}, the equation of the fitted regression line is
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#################NEW CODE###########
+#Estimated Fitted line Equation using base model
+print(paste("TotalTime = ", round(base.mod$coeff[1], digits = 3), " + ", round(base.mod$coeff[2],  digits = 3), "*AGE + ",
+            round(base.mod$coeff[3],  digits = 3), "*Gender1F2M + ", round(base.mod$coeff[4],  digits = 3), "*K0-5 ", sep = "")) 
+```
+The plot of total time vs. first split time with regression line of the base model is as below
+\newline
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2) 
+library(gridExtra)
+#TotalTime vs K0-5 with regression line of base model
+ggplot(dfm, aes(x = K0.5, y = totaltime)) + geom_point(shape = 1) + 
+geom_smooth(method = lm, aes(x = K0.5, y = predict(base.mod)), se = FALSE) + 
+labs(list(title = "TotalTime vs K0-5 with regression line of base model", x = "K0-5", y = "Total Time")) +
+theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=8, face="bold"))
+```
+\newpage
+Next, we plot the regression line of females vs. males at age 40 using base regression model. In this plot, the slope is the coefficient for K0.5.
+\newline
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Female Vs. Male regression line slopes at age 40
+ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+  geom_abline(aes(Age = "Female at age 40"), intercept = base.mod$coeff[1] + 40*base.mod$coeff[2] + base.mod$coeff[3], slope = base.mod$coeff[4], show_guide = TRUE) +
+  geom_abline(aes(Age = "Male at age 40"), intercept = base.mod$coeff[1] + 40*base.mod$coeff[2] + 2*base.mod$coeff[3], slope = base.mod$coeff[4], show_guide = TRUE) +
+  labs(list(title = "Female Vs. Male regression line slopes at age 40", x = "K0-5", y = "Total Time")) +
+  theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=8, face="bold")) +
+  scale_color_discrete(name="Females Vs. Male at Age 40")
+```
+
+Next we wanted to explore the regression model for total times that are either less than or equal to first quartile or greater than or equal to third quartile. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Subset data such that total finish time is below 1st quartile and above 3rd quartile 
+#quantile(dfm$totaltime)
+tt.1stQ <- quantile(dfm$totaltime)[2]
+tt.3rdQ <- quantile(dfm$totaltime)[4]
+
+dfm.firstQ <- subset(dfm, (dfm$totaltime<=tt.1stQ))
+dfm.thirdQ <- subset(dfm, (dfm$totaltime>=tt.3rdQ))
+#max(dfm.firstQ$totaltime)
+#min(dfm.thirdQ$totaltime)
+
+#Run base regression on subset data of the quartiles
+firstQ.mod = lm(totaltime~.,data=dfm.firstQ)
+thirdQ.mod = lm(totaltime~.,data=dfm.thirdQ)
+#firstQ.mod$coefficients
+#thirdQ.mod$coefficients
+```
+Using the regression model for total time less than or equal to first quartile, \textbf{lm(totaltime.lessthan.firstQ $\sim$ Age+Gender1F2M+K0.5)}, the equation of the fitted regression line is
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Estimated Fitted line Equation using base regression model for first quartile of total time
+print(paste("TotalTime less than 1stQ = ", round(firstQ.mod$coeff[1], digits = 3), " + ", round(firstQ.mod$coeff[2],  digits = 3), "*AGE - ",
+            abs(round(firstQ.mod$coeff[3],  digits = 3)), "*Gender1F2M + ", round(firstQ.mod$coeff[4],  digits = 3), "*K0-5 ", sep = "")) 
+```
+Using the regression model for total time greater than or equal to third quartile, \textbf{lm(totaltime.greaterthan.thirdQ $\sim$ Age+Gender1F2M+K0.5)}, the equation of the fitted regression line is
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Estimated Fitted line Equation using base regression model for third quartile of total time 
+print(paste("TotalTime greater than 3rdQ = ", round(thirdQ.mod$coeff[1], digits = 3), " - ", abs(round(thirdQ.mod$coeff[2],  digits = 3)), "*AGE + ",
+            round(thirdQ.mod$coeff[3],  digits = 3), "*Gender1F2M + ", round(thirdQ.mod$coeff[4],  digits = 3), "*K0-5 ", sep = "")) 
+```
+Next we plot the regression lines for total times that are less than first quartile or greater than third quartile for females and males at age 40. We observe the difference in intercept for the females and males when the total time is greater or equal to third quartile.
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+ymin <- min(dfm$totaltime)
+ymax <- max(dfm$totaltime)
+xmin <- min(dfm$K0.5)
+xmax <- max(dfm$K0.5)
+#Female Vs. Male slopes at age 40 for totaltime less than first quartile 
+plot1 <- ggplot(dfm.firstQ , aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+  geom_abline(aes(Age = "Female at age 40"), intercept = firstQ.mod$coeff[1] + 40*firstQ.mod$coeff[2] + firstQ.mod$coeff[3], slope = firstQ.mod$coeff[4], show_guide = TRUE) +
+  geom_abline(aes(Age = "Male at age 40"), intercept = firstQ.mod$coeff[1] + 40*firstQ.mod$coeff[2] + 2*firstQ.mod$coeff[3], slope = firstQ.mod$coeff[4], show_guide = TRUE) +
+  coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) +
+  labs(list(title = "Females Vs. Male at Age 40 \nfor total time less than first quartile", x = "K0-5", y = "Total Time")) +
+  theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=8, face="bold")) +
+  scale_color_discrete(name="Females Vs. Male")
+
+#Female Vs. Male slopes at different age groups - 40 for totaltime greater than third quartile
+plot2<- ggplot(dfm.thirdQ , aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+  geom_abline(aes(Age = "Female at age 40"), intercept = thirdQ.mod$coeff[1] + 40*thirdQ.mod$coeff[2] + thirdQ.mod$coeff[3], slope = thirdQ.mod$coeff[4], show_guide = TRUE) +
+  geom_abline(aes(Age = "Male at age 40"), intercept = thirdQ.mod$coeff[1] + 40*thirdQ.mod$coeff[2] + 2*thirdQ.mod$coeff[3], slope = thirdQ.mod$coeff[4], show_guide = TRUE) +
+  coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) +
+  labs(list(title = "Females Vs. Male at Age 40 \nfor total time greater than third quartile", x = "K0-5", y = "Total Time")) +
+  theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=8, face="bold")) +
+  scale_color_discrete(name="Females Vs. Male")
+
+grid.arrange(plot1, plot2, ncol=2)
+```
+
