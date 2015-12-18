@@ -198,11 +198,11 @@ hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
 hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
 ```
 
-The untransformed data appears slightly right skewed. A log transformation of the response variable results in a more normal distribution.
+The untransformed data appears slightly right skewed. A log transformation of the response variable would result in a more normal distribution.
 
 We then examined the base model standard diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.height=6,fig.width=6}
 par(mfrow=c(2,2))
 plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
@@ -236,19 +236,67 @@ or approximately `r as.integer(sqrt(score.mean))` minutes, a neglible improvemen
 
 $R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equal amount.
 
+We also attempted a range of polynominal transformations of the 5K time using an exponent in the range [1.0,2.5] but this did not improve model accuracy
+significantly. For report brevity, these results have been omitted but are available upon request (and can be found in the project GitHub site - See Appendix B).
+
 ## Clustering the Data into Subgroups
+
+```{r echo=FALSE,warning=FALSE, message=FALSE}
+# Clustering the Data into Subgroups
+# Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+# Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
+
+minclusters = 3
+maxclusters = 20
+overallclustererror = c()
+for (num_clusters in minclusters:maxclusters) {
+  fit.km <- kmeans(dfm, num_clusters)
+  meanclustererror = c()
+  # Find cv score for each cluster
+  for (i in 1:num_clusters){
+    df = dfm[ fit.km$cluster == i, ]
+    folds = create_folds(df,k)
+    foldscore = c()
+    for (j in 1:k) {
+      train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+      test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+
+      model = lm(totaltime~.-logtotaltime,data=train)
+      foldscore[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+    }
+    meanclustererror[i] = mean(foldscore)
+  }
+  # store mean error for a given k clusters
+  overallclustererror[num_clusters-2] = mean(meanclustererror)
+}
+```
 
 Since the transformation yielded only a small improvement, we elected to try clustering the data into subgroups using $k$-Means.
 
+By clustering, the resulting error rates decreased significantly. Using $k=3$, the mean error rate was `r as.integer(overallclustererror[1])` or $\pm$ 
+`r as.integer(sqrt(overallclustererror[1]))` min. At $k=20$, the mean error rate was `r as.integer(overallclustererror[maxclusters - minclusters + 1])`
+or $\pm$ `r as.integer(sqrt(overallclustererror[maxclusters - minclusters + 1]))` min, a significant improvement.
+
 ```{r echo=FALSE}
-# Warning: this takes awhile to run because it includes all data points
-# install.packages("fpc")
-#library(fpc)
-#plotcluster(dfm2, fit.km$cluster)
+# TODO fix x axis of plot because it is off by -2
+plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
 ```
 
-**Note: as you can see, the unsupervised learning found groupings that would have difficult if not
-impossible to us to find on our own**
+Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number
+of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
+`r as.integer(sqrt(overallclustererror[6]))` min, which is approximately half the error as compared to unclustered linear regression.
+
+
+```{r echo=FALSE}
+# Show the resulting clusters
+#fit.km <- kmeans(dfm, 8)
+# install.packages("fpc")
+#library(fpc)
+#plotcluster(dfm, fit.km$cluster)
+```
+
+TODO: As you can see, the unsupervised learning found groupings that would have difficult if not
+impossible to us to find on our own.
 
 ## Conclusion and Next Steps
 
@@ -270,6 +318,12 @@ The following is the code used to prepare this report:
 # Appendix B - References
 
 This entire project code including source data can be found on GitHub ([https://github.com/wihl/statse139-project](https://github.com/wihl/statse139-project))
+
+### R Packages Used
+
+**fpc** used to plot clusters
+
+### Solutions Found on StackOverflow
 
 [Place R Code in Appendix](http://stackoverflow.com/questions/33485893/create-appendix-with-r-code-in-rmarkdown-knitr)
 

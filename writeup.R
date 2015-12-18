@@ -108,8 +108,38 @@ for (i in 1:k) {
 }
 score.mean = mean(score)
 
-# Warning: this takes awhile to run because it includes all data points
+# Clustering the Data into Subgroups
+# Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+# Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
+
+minclusters = 3
+maxclusters = 20
+overallclustererror = c()
+for (num_clusters in minclusters:maxclusters) {
+  fit.km <- kmeans(dfm, num_clusters)
+  meanclustererror = c()
+  # Find cv score for each cluster
+  for (i in 1:num_clusters){
+    df = dfm[ fit.km$cluster == i, ]
+    folds = create_folds(df,k)
+    foldscore = c()
+    for (j in 1:k) {
+      train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+      test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+
+      model = lm(totaltime~.-logtotaltime,data=train)
+      foldscore[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+    }
+    meanclustererror[i] = mean(foldscore)
+  }
+  # store mean error for a given k clusters
+  overallclustererror[num_clusters-2] = mean(meanclustererror)
+}
+# TODO fix x axis of plot because it is off by -2
+plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
+# Show the resulting clusters
+#fit.km <- kmeans(dfm, 8)
 # install.packages("fpc")
 #library(fpc)
-#plotcluster(dfm2, fit.km$cluster)
+#plotcluster(dfm, fit.km$cluster)
 ## 
