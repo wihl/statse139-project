@@ -56,6 +56,9 @@ k = 10
 
 # Read in the data for multiple years
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+dfm$Age2014 = NULL # remove unneeded column which is mostly NA
+ok = complete.cases(dfm)
+dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
@@ -76,7 +79,6 @@ in recent years, Boston is currently and the foreseeable future restricted to ap
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
-# Ref: http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
@@ -104,13 +106,14 @@ a marathon requires.
 
 ## Data Sources
 
-We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data set contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
 
 ## Methodology
 
 We are attempting to build the most accurate prediction model possible on the smallest amount of interesting data. We are not attempting to 
 infer or analyze the data extensively. Our method consists of the following steps:
 
+1. Data Cleansing
 1. Create a baseline regression using OLS
 1. Analyze the data and perform appropriate transformations
 1. Cluster the data into subgroups using unsupervised learning, such as $k$-means
@@ -118,8 +121,14 @@ infer or analyze the data extensively. Our method consists of the following step
 
 Throughout we will be using 10-fold cross validation testing with sum of squares errors as the metric to improve.
 
+## Data Cleansing
 
-## Step 1: Baseline Regression
+Even though we downloaded the data from another study that had performed some scrubbing, we needed to perform additional data cleansing.
+We had to eliminate any rows that were missing any split times as imputation might have tainted the predictive model. Since we were using 
+$k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample. Finally, gender had a
+value of {1, 2} which we had to convert into a factor in R.
+
+## Baseline Regression
 ```{r echo=FALSE, results="hide"}
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
@@ -140,14 +149,26 @@ for (i in 1:k) {
 score.mean = mean(score)
 ```
 
-We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time.
+We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time. The response variable
+is the finish time in minutes.
 
 Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)`
 or approximately `r as.integer(sqrt(score.mean))` minutes.
 While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
 it makes a significant difference in terms of ability to qualify for Boston.
 
-## Step 2: Examination of the data and transformations.
+## Examination of the Data and Transformations
+
+```{r echo=FALSE}
+par(mfrow=c(1,2))
+hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
+
+#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
+hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
+```
+
+The untransformed data appears somewhat right skewed. A log transformation of the response variable results in a more normal distribution.
+
 
 ```{r echo=FALSE}
 #par(mfrow=c(2,2))
@@ -205,9 +226,15 @@ Let's try subsetting the data set in subgroups using an unsupervised learning al
 **Note: as you can see, the unsupervised learning found groupings that would have difficult if not
 impossible to us to find on our own**
 
-## Conclusion
+## Conclusion and Next Steps
 
-By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model...
+By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model.
+
+Potential next steps of this project include:
+
+* Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
+accurate than what is currently available to runners.
+
 
 # Appendix A - Code
 
@@ -220,3 +247,4 @@ The following is the code used to prepare this report:
 
 [Place R Code in Appendix](http://stackoverflow.com/questions/33485893/create-appendix-with-r-code-in-rmarkdown-knitr)
 
+[Takes mean by subgroup in R](http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r)

@@ -42,6 +42,9 @@ k = 10
 
 # Read in the data for multiple years
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+dfm$Age2014 = NULL # remove unneeded column which is mostly NA
+ok = complete.cases(dfm)
+dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
@@ -49,7 +52,6 @@ dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 # Find mean finish time by gender
-# Ref: http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
@@ -70,6 +72,11 @@ for (i in 1:k) {
   score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
+par(mfrow=c(1,2))
+hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
+
+#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
+hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
 #par(mfrow=c(2,2))
 #plot(model, pch=23 ,bg="chocolate1",cex=.8)
 
