@@ -12,9 +12,49 @@ output: pdf_document
 ---
 
 ```{r echo=FALSE}
-# NOTE: All writeup and visualizations will go into this file.
-#       All basic calculations and explorations will go into the appendices.
 
+# Boston Marathon Finish Time Predictions
+# Harvard Stats E139 Fall 2015
+# Nathaniel Burbank, Pooja Singh, David Wihl
+#
+# December 21, 2015
+
+
+# Common Functions
+
+create_folds = function (df, k){
+  # Perform k-Fold Cross Validation and return average score
+  # Inspired by Scikit-Learn's cross_val_score
+  if (missing(k)) {
+    k = 10
+  }
+  
+  train1_start = train1_end = train2_start = train2_end = test_start = test_end = c()
+  testsize = nrow(df) / k 
+  for (i in 1:k){
+    if (i < k){
+      train1_start[i] = 1
+      train1_end[i] = floor((k-i) * testsize)
+    } else {
+      train1_start[i] = 0
+      train1_end[i] = 0
+    }
+    test_start[i] = max(ceiling((k-i) * testsize),1)
+    test_end[i]   = floor((k-i+1) * testsize)
+    train2_start[i] = 0
+    train2_end[i] = 0
+    if (i > 1){
+      train2_start[i] = ceiling((k-i+1) * testsize)
+      train2_end[i] = nrow(df)
+    }
+  }
+  return (data.frame(train1_start, train1_end, train2_start, train2_end, test_start, test_end))
+}
+
+# we'll do 10-fold cross validation
+k = 10 
+
+# Read in the data for multiple years
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
@@ -36,6 +76,7 @@ in recent years, Boston is currently and the foreseeable future restricted to ap
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
+# Ref: http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
@@ -43,10 +84,10 @@ women = as.integer(agg$x[1])
 
 
 
-Mean Finish Time    Men         Women
----------------    ---------    -------
-Worldwide(*)       253           282   
-Boston(**)         `r men`             `r women`
+Mean Finish Time(min)    Men         Women
+--------------------    ---------    -------
+Worldwide(*)            253           282   
+Boston(**)              `r men`             `r women`
 
 
 (*) [The Guardian](http://www.theguardian.com/lifeandstyle/the-running-blog/2015/apr/21/marathons-by-numbers-running-the-data)
@@ -63,7 +104,7 @@ a marathon requires.
 
 ## Data Sources
 
-We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for 69923 runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
 
 ## Methodology
 
@@ -79,12 +120,34 @@ Throughout we will be using 10-fold cross validation testing with sum of squares
 
 
 ## Step 1: Baseline Regression
+```{r echo=FALSE, results="hide"}
+# Create a set of k-fold sets for cross-validation
+folds = create_folds(dfm,k)
+score = c()
+
+# Baseline regression
+base.mod = lm(totaltime~.,data=dfm)
+summary(base.mod)
+
+# get baseline score 
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
+
+  model = lm(totaltime~.,data=train)
+  score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+}
+score.mean = mean(score)
+```
+
 We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time.
 
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of 240 or approximately 15 minutes.
-While $\pm$ 15 minutes over the course of a four hour race may not seem like a large error, it makes a significant difference in terms of ability
-to qualify for Boston.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)`
+or approximately `r as.integer(sqrt(score.mean))` minutes.
+While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
+it makes a significant difference in terms of ability to qualify for Boston.
 
+## Step 2: Examination of the data and transformations.
 
 ```{r echo=FALSE}
 #par(mfrow=c(2,2))
@@ -96,8 +159,6 @@ to qualify for Boston.
 #xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
 #plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
 ```
-
-## Step 2: Examination of the data and transformations.
 
 
 ```{r echo=FALSE}
@@ -151,7 +212,7 @@ By transforming and subsetting the data we were able to bring down the size of t
 # Appendix A - Code
 
 The following is the code used to prepare this report:
-```{r code=readLines(knitr::purl('basecode.Rmd', documentation = 0)), eval = FALSE}
+```{r code=readLines(knitr::purl('writeup.Rmd', documentation = 0)), eval = FALSE}
 
 ```
 
