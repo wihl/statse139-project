@@ -22,6 +22,11 @@ output: pdf_document
 
 # Common Functions
 
+
+percent <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
 create_folds = function (df, k){
   # Perform k-Fold Cross Validation and return average score
   # Inspired by Scikit-Learn's cross_val_score
@@ -128,6 +133,28 @@ We had to eliminate any rows that were missing any split times as imputation mig
 $k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample. Finally, gender had a
 value of {1, 2} which we had to convert into a factor in R.
 
+### Removing Outliers
+
+```{r echo=FALSE}
+# Remove outliers (5k > 3 sigma from mean)
+hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
+mean5k = mean(dfm$K0.5)
+sd5k = sd(dfm$K0.5)
+outliers5k = dfm$K0.5>(mean5k + 3*sd5k)
+outliers5ksum = sum(outliers5k)
+dfm.rows = nrow(dfm)
+dfm = dfm[!outliers5k,]
+malepct = table(dfm$Gender1F2M)[2]  / (table(dfm$Gender1F2M)[2] + table(dfm$Gender1F2M)[1])
+```
+
+As the histogram reveals, there are several outliers in 5k split times. These could be due to timing errors,
+an injury or accident at the start of the race. Due to OLS sensitivity, we elected to remove outliers
+that were more than three standard deviations greater than the mean. In total there were `r outliers5ksum` rows like this out of 
+`r dfm.rows` (`r percent(outliers5ksum / as.numeric(dfm.rows))`).
+
+Age was in the range [18,81]. (The minimum age to run the Boston Marathon is 18). No outliers were removed. Males represented
+`r percent(malepct)` of total runners, which seemed reasonable.
+
 ## Baseline Regression
 ```{r echo=FALSE, results="hide"}
 # Create a set of k-fold sets for cross-validation
@@ -136,7 +163,6 @@ score = c()
 
 # Baseline regression
 base.mod = lm(totaltime~.,data=dfm)
-summary(base.mod)
 
 # get baseline score 
 for (i in 1:k) {
@@ -152,6 +178,12 @@ score.mean = mean(score)
 We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time. The response variable
 is the finish time in minutes.
 
+The baseline model was quite good, but we felt we could do better.
+
+```{r echo=FALSE}
+summary(base.mod)
+```
+
 Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)`
 or approximately `r as.integer(sqrt(score.mean))` minutes.
 While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
@@ -160,14 +192,13 @@ it makes a significant difference in terms of ability to qualify for Boston.
 ## Examination of the Data and Transformations
 
 ```{r echo=FALSE}
+# Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
-
-#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
 ```
 
-The untransformed data appears somewhat right skewed. A log transformation of the response variable results in a more normal distribution.
+The untransformed data appears slightly right skewed. A log transformation of the response variable results in a more normal distribution.
 
 
 ```{r echo=FALSE}
@@ -245,6 +276,10 @@ The following is the code used to prepare this report:
 
 # Appendix B - References
 
+This entire project code including source data can be found on GitHub ([https://github.com/wihl/statse139-project](https://github.com/wihl/statse139-project))
+
 [Place R Code in Appendix](http://stackoverflow.com/questions/33485893/create-appendix-with-r-code-in-rmarkdown-knitr)
 
 [Takes mean by subgroup in R](http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r)
+
+[Formatting R Values as Percent](http://stackoverflow.com/questions/7145826/how-to-format-a-number-as-percentage-in-r)

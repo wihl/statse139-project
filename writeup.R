@@ -8,6 +8,11 @@
 
 # Common Functions
 
+
+percent <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
 create_folds = function (df, k){
   # Perform k-Fold Cross Validation and return average score
   # Inspired by Scikit-Learn's cross_val_score
@@ -55,13 +60,21 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
+# Remove outliers (5k > 3 sigma from mean)
+hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
+mean5k = mean(dfm$K0.5)
+sd5k = sd(dfm$K0.5)
+outliers5k = dfm$K0.5>(mean5k + 3*sd5k)
+outliers5ksum = sum(outliers5k)
+dfm.rows = nrow(dfm)
+dfm = dfm[!outliers5k,]
+malepct = table(dfm$Gender1F2M)[2]  / (table(dfm$Gender1F2M)[2] + table(dfm$Gender1F2M)[1])
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
 score = c()
 
 # Baseline regression
 base.mod = lm(totaltime~.,data=dfm)
-summary(base.mod)
 
 # get baseline score 
 for (i in 1:k) {
@@ -72,10 +85,10 @@ for (i in 1:k) {
   score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
+summary(base.mod)
+# Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
-
-#The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
 #par(mfrow=c(2,2))
 #plot(model, pch=23 ,bg="chocolate1",cex=.8)
