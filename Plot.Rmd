@@ -27,12 +27,15 @@ The plot of total time vs. first split time with regression line of the base mod
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(ggplot2) 
 library(gridExtra)
+
+dfm$AgeGroup <- cut(dfm$Age, breaks=c(15,25,35,45,55,65,75,85))
+
 #TotalTime vs K0-5 with regression line of base model
-ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M), shape=AgeGroup)) + geom_point() +
   stat_smooth(method = lm, aes(x = K0.5, y = predict(base.mod)), se = FALSE) +
-  labs(list(title = "Total time Vs. First split time", x = "K0-5", y = "Total Time")) +
+  labs(list(title = "Total time Vs. First split time", x = "K0-5", y = "Total Time", shape="Age Group", colour="1-Female Vs. 2-Male")) +
   theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=8, face="bold")) +
-  scale_color_discrete(name="1-Female Vs. 2-Male")
+  scale_shape_manual(values=1:nlevels(dfm$AgeGroup))
 ```
 
 Next we wanted to explore the regression model for total times that are either less than or equal to first quartile or greater than or equal to third quartile. 
@@ -75,16 +78,16 @@ ymax <- max(dfm$totaltime)
 xmin <- min(dfm$K0.5)
 xmax <- max(dfm$K0.5)
 #Female Vs. Male slopes for totaltime less than first quartile
-plot1 <- ggplot(dfm.firstQ, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+plot1 <- ggplot(dfm.firstQ, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape=1) +
   stat_smooth(method = lm, aes(x = K0.5, y = predict(firstQ.mod)), se = FALSE) +
   coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) +
   labs(list(title = "Females Vs. Male \nfor total time less than first quartile", x = "K0-5", y = "Total Time")) +
   theme(legend.title = element_text(size=6, face="bold"), title = element_text(size=6, face="bold")) +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "bottom", legend.title = element_text(size=4)) +
   scale_color_discrete(name="1-Female Vs. 2-Male")
 
 #Female Vs. Male slopes for totaltime greater than third quartile
-plot2<- ggplot(dfm.thirdQ, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+plot2<- ggplot(dfm.thirdQ, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape=1) +
   stat_smooth(method = lm, aes(x = K0.5, y = predict(thirdQ.mod)), se = FALSE) +
   coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) +
   labs(list(title = "Females Vs. Male \nfor total time greater than third quartile", x = "K0-5", y = "Total Time")) +
