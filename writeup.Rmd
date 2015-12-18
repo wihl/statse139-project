@@ -7,7 +7,7 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-    We want to build a reasonably accurate model for predicting Boston Marathon finish times based on gender, age on 5k split times. We will build a baseline using untransformed linear regression. Then, we will analyze the data and perform appropriate transformations. After transforming the data, we will cluster the data into different subgroups using unsupervised learning algorithms. Finally, we will run different regression algorithms on the transformed and subsetted data to see our improvements over the baseline.
+    We wanted to build a reasonably accurate model for predicting Boston Marathon finish times based on a runner's gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Then, we analyzed the data and performed appropriate transformations. After transforming the data, we clustered the race results into *BLANK* different subgroups using an unsupervised learning algorithms. Using these different clusters of race results, we then subseted our dataset into *BLANK* different subsets and generated a new regression model for each subset. Finally, we compared the accuracy of predictions made via our segmented regression model with our baseline model.
 output: pdf_document
 ---
 
@@ -308,6 +308,7 @@ Potential next steps of this project include:
 * Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
 accurate than what is currently available to runners.
 
+\newpage
 
 # Appendix A - Code
 
@@ -315,6 +316,8 @@ The following is the code used to prepare this report:
 ```{r code=readLines(knitr::purl('writeup.Rmd', documentation = 0)), eval = FALSE}
 
 ```
+
+\newpage
 
 # Appendix B - References
 
@@ -333,3 +336,7 @@ This entire project code including source data can be found on GitHub ([https://
 [Takes mean by subgroup in R](http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r)
 
 [Formatting R Values as Percent](http://stackoverflow.com/questions/7145826/how-to-format-a-number-as-percentage-in-r)
+
+[R Markdown Page Break](http://stackoverflow.com/questions/25240541/how-to-add-newpage-in-rmarkdown-in-a-smart-way)
+
+[Remove Rows with NA in DataFrame](http://stackoverflow.com/questions/4862178/remove-rows-with-nas-in-data-frame) (use of complete.cases)
