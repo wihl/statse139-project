@@ -338,3 +338,5 @@ This entire project code including source data can be found on GitHub ([https://
 [Formatting R Values as Percent](http://stackoverflow.com/questions/7145826/how-to-format-a-number-as-percentage-in-r)
 
 [R Markdown Page Break](http://stackoverflow.com/questions/25240541/how-to-add-newpage-in-rmarkdown-in-a-smart-way)
+
+[Remove Rows with NA in DataFrame](http://stackoverflow.com/questions/4862178/remove-rows-with-nas-in-data-frame) (use of complete.cases)
