@@ -308,6 +308,7 @@ Potential next steps of this project include:
 * Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
 accurate than what is currently available to runners.
 
+\newpage
 
 # Appendix A - Code
 
@@ -315,6 +316,8 @@ The following is the code used to prepare this report:
 ```{r code=readLines(knitr::purl('writeup.Rmd', documentation = 0)), eval = FALSE}
 
 ```
+
+\newpage
 
 # Appendix B - References
 
@@ -333,3 +336,5 @@ This entire project code including source data can be found on GitHub ([https://
 [Takes mean by subgroup in R](http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r)
 
 [Formatting R Values as Percent](http://stackoverflow.com/questions/7145826/how-to-format-a-number-as-percentage-in-r)
+
+[R Markdown Page Break](http://stackoverflow.com/questions/25240541/how-to-add-newpage-in-rmarkdown-in-a-smart-way)
