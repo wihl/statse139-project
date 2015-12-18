@@ -1,0 +1,188 @@
+---
+title: "otherRegressions"
+output: pdf_document
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+####BaseCODE
+dfm <- read.csv("/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+#############
+```
+
+```{r, echo=FALSE}
+dfm.orig <- dfm # saving it for later as we need half marathon times
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#########Same as BASE code...continued
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
+
+#Baseline regression
+base.mod = lm(totaltime~.,data=dfm)
+#summary(base.mod)
+
+create_folds = function (df, k){
+  # Perform k-Fold Cross Validation and return average score
+  # Inspired by Scikit-Learn's cross_val_score
+  if (missing(k)) {
+    k = 5
+  }
+  
+  train1_start = train1_end = train2_start = train2_end = test_start = test_end = c()
+  testsize = nrow(df) / k 
+  for (i in 1:k){
+    if (i < k){
+      train1_start[i] = 1
+      train1_end[i] = floor((k-i) * testsize)
+    } else {
+      train1_start[i] = 0
+      train1_end[i] = 0
+    }
+    test_start[i] = max(ceiling((k-i) * testsize),1)
+    test_end[i]   = floor((k-i+1) * testsize)
+    train2_start[i] = 0
+    train2_end[i] = 0
+    if (i > 1){
+      train2_start[i] = ceiling((k-i+1) * testsize)
+      train2_end[i] = nrow(df)
+    }
+  }
+  return (data.frame(train1_start, train1_end, train2_start, train2_end, test_start, test_end))
+}
+
+k=10 #no of folds
+```
+The nonsupervised cluster error means were widely dispered. We pursued to subset the data by agegroups and gender, rather than using the nonsupervised clustering mechanisms and compare the mean error for the subset groups obtained by using crossvalidation. Below is the output from R code for different combinations of subset groups. If we subset the data by agegroup only, kmeans clusters were better for modeling boston marathon predictive finish times. 
+\newline
+If we subset the data by agegroup and gender, we were getting on average much less mean errors for females groups compared to kmeans clusters but not the same can be said for male groups.
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#######################NEW CODE################################################################
+#The nonsupervised cluster error means were widely dispered. 
+#Let's see if we subset the data by agegroups and gender, does the error means get better
+#min(dfm$Age)
+#max(dfm$Age)
+#Subset data by agegroups
+dfm.agegroup1 = subset(dfm, (dfm$Age>=16 & dfm$Age<=25))
+dfm.agegroup2 = subset(dfm, (dfm$Age>=26 & dfm$Age<=35))
+dfm.agegroup3 = subset(dfm, (dfm$Age>=36 & dfm$Age<=45))
+dfm.agegroup4 = subset(dfm, (dfm$Age>=46 & dfm$Age<=55))
+dfm.agegroup5 = subset(dfm, (dfm$Age>=56 & dfm$Age<=65))
+dfm.agegroup6 = subset(dfm, (dfm$Age>=66 & dfm$Age<=75))
+dfm.agegroup7 = subset(dfm, (dfm$Age>=76 & dfm$Age<=85))
+
+#List of agegroups for females
+dfm.agegroup <- list(dfm.agegroup1, dfm.agegroup2, dfm.agegroup3, dfm.agegroup4, dfm.agegroup5, dfm.agegroup6, dfm.agegroup7)
+age1 = 15
+age2 = 25
+
+for (i in 1:7) {  
+  df<- dfm.agegroup[[i]]
+  folds = create_folds(dfm.agegroup[[i]],k)
+  score = c()
+  
+  for (j in 1:k) {
+    train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+    test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+    
+    model = lm(totaltime~.,data=train)
+    score[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  }
+  cat("In age group i=[", age1, "," , age2,"] the mean error is ",mean(score), " and number of rows =", as.numeric(nrow(df)), "\n")
+  age1 <- age1 + 10
+  age2 <- age2 + 10
+}
+cat("###########################################################################################################")
+
+#For females and agegroups
+dfm.f.agegroup1 = subset(dfm, (dfm$Age>=16 & dfm$Age<=25 & dfm$Gender1F2M==1))
+dfm.f.agegroup2 = subset(dfm, (dfm$Age>=26 & dfm$Age<=35 & dfm$Gender1F2M==1))
+dfm.f.agegroup3 = subset(dfm, (dfm$Age>=36 & dfm$Age<=45 & dfm$Gender1F2M==1))
+dfm.f.agegroup4 = subset(dfm, (dfm$Age>=46 & dfm$Age<=55 & dfm$Gender1F2M==1))
+dfm.f.agegroup5 = subset(dfm, (dfm$Age>=56 & dfm$Age<=65 & dfm$Gender1F2M==1))
+dfm.f.agegroup6 = subset(dfm, (dfm$Age>=66 & dfm$Age<=75 & dfm$Gender1F2M==1))
+dfm.f.agegroup7 = subset(dfm, (dfm$Age>=76 & dfm$Age<=85 & dfm$Gender1F2M==1))
+
+#List of agegroups for females
+dfm.agegroup <- list(dfm.f.agegroup1, dfm.f.agegroup2, dfm.f.agegroup3, dfm.f.agegroup4, dfm.f.agegroup5, dfm.f.agegroup6, dfm.f.agegroup7)
+age1 = 15
+age2 = 25
+
+for (i in 1:7) {  
+  df<- dfm.agegroup[[i]]
+  folds = create_folds(dfm.agegroup[[i]],k)
+  score = c()
+  
+  for (j in 1:k) {
+    train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+    test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+    
+    model = lm(totaltime~.,data=train)
+    score[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  }
+  cat("For females in age group i=[", age1, "," , age2,"] the mean error is ",mean(score), " and number of rows =", as.numeric(nrow(df)), "\n")
+  age1 <- age1 + 10
+  age2 <- age2 + 10
+}
+cat("###########################################################################################################")
+
+#For males and agegroups
+dfm.m.agegroup1 = subset(dfm, (dfm$Age>=16 & dfm$Age<=25 & dfm$Gender1F2M==2))
+dfm.m.agegroup2 = subset(dfm, (dfm$Age>=26 & dfm$Age<=35 & dfm$Gender1F2M==2))
+dfm.m.agegroup3 = subset(dfm, (dfm$Age>=36 & dfm$Age<=45 & dfm$Gender1F2M==2))
+dfm.m.agegroup4 = subset(dfm, (dfm$Age>=46 & dfm$Age<=55 & dfm$Gender1F2M==2))
+dfm.m.agegroup5 = subset(dfm, (dfm$Age>=56 & dfm$Age<=65 & dfm$Gender1F2M==2))
+dfm.m.agegroup6 = subset(dfm, (dfm$Age>=66 & dfm$Age<=75 & dfm$Gender1F2M==2))
+dfm.m.agegroup7 = subset(dfm, (dfm$Age>=76 & dfm$Age<=85 & dfm$Gender1F2M==2))
+
+#List of agegroups for females
+dfm.agegroup <- list(dfm.m.agegroup1, dfm.m.agegroup2, dfm.m.agegroup3, dfm.m.agegroup4, dfm.m.agegroup5, dfm.m.agegroup6, dfm.m.agegroup7)
+age1 = 15
+age2 = 25
+
+for (i in 1:7) {  
+  df<- dfm.agegroup[[i]]
+  folds = create_folds(dfm.agegroup[[i]],k)
+  score = c()
+  
+  for (j in 1:k) {
+    train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+    test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+    
+    model = lm(totaltime~.,data=train)
+    score[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  }
+  cat("For males in age group i=[", age1, "," , age2,"] the mean error is ",mean(score), " and number of rows =", as.numeric(nrow(df)), "\n")
+  age1 <- age1 + 10
+  age2 <- age2 + 10
+}
+
+#If we subset the data by agegroup only, kmeans clusters were better for modeling boston marathon predictive finish times
+#If we subset the data by agegroup and gender, we were getting on average much less mean errors for females groups compared to kmeans clusters but not the same can be said for male groups.
+```
+We proceeded next using the half marathon time as a predictor, rather than the first split time, to find a better predictor. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#########Run regression model using HalfMar time
+dfm.half <- dfm.orig[c("totaltime","Age","Gender1F2M","HalfMar")] # keep only columns we need
+dfm.half = dfm.half[!is.na(dfm.half$totaltime), ]  # eliminate rows with no finish times
+dfm.half = dfm.half[!is.na(dfm.half$HalfMar), ]  # eliminate rows with no half marathontimes
+
+df <- dfm.half
+folds = create_folds(df,k)
+score = c()
+for (j in 1:k) {
+  train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+  test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+  
+  model = lm(totaltime~.,data=train)
+  score[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+}
+half.mar.mean.error <- round(mean(score),digits=2)
+cat("Using half marathon time the mean error is ",mean(score), "\n")
+
+##Using the half marathon time, we have greatly reduced the mean error using cross-validation. This simply bolsters the fact that closer we are to finish line, better our predictive analytics will be. 
+```
+Using the half marathon time, we have greatly reduced the mean error as, `r half.mar.mean.error` using cross-validation. This was an expectedd result as closer we are to finish line, better our predictive analytics will be, hence half marathon time was a better predictor than first split time. It will be more interesting to find the breaking point in the split times that if the runner is lagging behind it then she or he will not be able to finish the boston marathon in time. 
+
