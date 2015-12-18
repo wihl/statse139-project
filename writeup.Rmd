@@ -169,8 +169,8 @@ for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  model = lm(totaltime~.,data=train)
-  score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  cvmodel = lm(totaltime~.,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
 ```
@@ -200,52 +200,45 @@ hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (mi
 
 The untransformed data appears slightly right skewed. A log transformation of the response variable results in a more normal distribution.
 
+We then examined the base model standard diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
 
 ```{r echo=FALSE}
-#par(mfrow=c(2,2))
-#plot(model, pch=23 ,bg="chocolate1",cex=.8)
-
-
-#y.hat = predict(base.mod)
-#xydata = data.frame(x=y.hat, y=resid(base.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+par(mfrow=c(2,2))
+plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
+
+Given the right tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right skewness of the finish time histogram,
+we elected to perform a log transform of the response variable.
 
 
 ```{r echo=FALSE}
+# Try regression on log(response)
+dfm$logtotaltime = log(dfm$totaltime)
+folds = create_folds(dfm,k)
+score = c()
 
-#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
-#y.hat = predict(tx.mod)
-#xydata = data.frame(x=y.hat, y=resid(tx.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-#par(mfrow=c(2,2))
-#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
+tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
+
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
+
+  cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
+  score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
+}
+score.mean = mean(score)
+
 ```
-Some preliminary EDA of the data:
-
-The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 
 
-That seems better.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)`
+or approximately `r as.integer(sqrt(score.mean))` minutes, a neglible improvement.
 
-Let's try a multiple regression on the log transformed data:
+$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equal amount.
 
+## Clustering the Data into Subgroups
 
-Our transformed mean error is 
-
-
-
-Let's plot the residuals vs predicted
-
-This appears to be spreading out and trending up. 
-
-Let's try a polynomial transformation on the 5k time to see if that improves things:
-
-## Step 3: Clustering the Data into Subgroups
-
-Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+Since the transformation yielded only a small improvement, we elected to try clustering the data into subgroups using $k$-Means.
 
 ```{r echo=FALSE}
 # Warning: this takes awhile to run because it includes all data points

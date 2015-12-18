@@ -81,8 +81,8 @@ for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  model = lm(totaltime~.,data=train)
-  score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  cvmodel = lm(totaltime~.,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
 summary(base.mod)
@@ -90,22 +90,24 @@ summary(base.mod)
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
 hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
-#par(mfrow=c(2,2))
-#plot(model, pch=23 ,bg="chocolate1",cex=.8)
+par(mfrow=c(2,2))
+plot(base.mod, pch=23 ,bg="seashell",cex=.8)
+# Try regression on log(response)
+dfm$logtotaltime = log(dfm$totaltime)
+folds = create_folds(dfm,k)
+score = c()
 
+tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
 
-#y.hat = predict(base.mod)
-#xydata = data.frame(x=y.hat, y=resid(base.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
-#y.hat = predict(tx.mod)
-#xydata = data.frame(x=y.hat, y=resid(tx.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-#par(mfrow=c(2,2))
-#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
+  cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
+  score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
+}
+score.mean = mean(score)
+
 # Warning: this takes awhile to run because it includes all data points
 # install.packages("fpc")
 #library(fpc)
