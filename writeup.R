@@ -8,6 +8,11 @@
 
 # Common Functions
 
+
+percent <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
 create_folds = function (df, k){
   # Perform k-Fold Cross Validation and return average score
   # Inspired by Scikit-Learn's cross_val_score
@@ -42,6 +47,9 @@ k = 10
 
 # Read in the data for multiple years
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+dfm$Age2014 = NULL # remove unneeded column which is mostly NA
+ok = complete.cases(dfm)
+dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
@@ -49,45 +57,88 @@ dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 # Find mean finish time by gender
-# Ref: http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
+# Remove outliers (5k > 3 sigma from mean)
+hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
+mean5k = mean(dfm$K0.5)
+sd5k = sd(dfm$K0.5)
+outliers5k = dfm$K0.5>(mean5k + 3*sd5k)
+outliers5ksum = sum(outliers5k)
+dfm.rows = nrow(dfm)
+dfm = dfm[!outliers5k,]
+malepct = table(dfm$Gender1F2M)[2]  / (table(dfm$Gender1F2M)[2] + table(dfm$Gender1F2M)[1])
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
 score = c()
 
 # Baseline regression
 base.mod = lm(totaltime~.,data=dfm)
-summary(base.mod)
 
 # get baseline score 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  model = lm(totaltime~.,data=train)
-  score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  cvmodel = lm(totaltime~.,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
-#par(mfrow=c(2,2))
-#plot(model, pch=23 ,bg="chocolate1",cex=.8)
+summary(base.mod)
+# Display histograms of response variable untransformed and log transformed
+par(mfrow=c(1,2))
+hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
+hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
+par(mfrow=c(2,2))
+plot(base.mod, pch=23 ,bg="seashell",cex=.8)
+# Try regression on log(response)
+dfm$logtotaltime = log(dfm$totaltime)
+folds = create_folds(dfm,k)
+score = c()
 
+tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
 
-#y.hat = predict(base.mod)
-#xydata = data.frame(x=y.hat, y=resid(base.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
-#y.hat = predict(tx.mod)
-#xydata = data.frame(x=y.hat, y=resid(tx.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-#par(mfrow=c(2,2))
-#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
-# Warning: this takes awhile to run because it includes all data points
+  cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
+  score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
+}
+score.mean = mean(score)
+
+# Clustering the Data into Subgroups
+# Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+
+minclusters = 3
+maxclusters = 20
+overallclustererror = c()
+for (num_clusters in minclusters:maxclusters) {
+  fit.km <- kmeans(dfm, num_clusters)
+  meanclustererror = c()
+  # Find cv score for each cluster
+  for (i in 1:num_clusters){
+    df = dfm[ fit.km$cluster == i, ]
+    folds = create_folds(df,k)
+    foldscore = c()
+    for (j in 1:k) {
+      train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+      test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+
+      model = lm(totaltime~.-logtotaltime,data=train)
+      foldscore[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+    }
+    meanclustererror[i] = mean(foldscore)
+  }
+  # store mean error for a given k clusters
+  overallclustererror[num_clusters-2] = mean(meanclustererror)
+}
+# TODO fix x axis of plot because it is off by -2
+plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
+# Show the resulting clusters
+#fit.km <- kmeans(dfm, 8)
 # install.packages("fpc")
 #library(fpc)
-#plotcluster(dfm2, fit.km$cluster)
+#plotcluster(dfm, fit.km$cluster)
 ## 

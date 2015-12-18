@@ -3,46 +3,17 @@ Final team project for Stats E139 Fall 2015
 
 Team:
 
-Nathaniel Burbank nathaniel.burbank@gmail.com
+Nathaniel Burbank
 
-Pooja Singh goodwillyoga@gmail.com
+Pooja Singh 
 
-David Wihl davidwihl@gmail.com
+David Wihl 
 
 Current Proposal: Doing some form of regression or prediction of marathon finish times.
 
 [See Draft Proposal](proposal.md)
 
-Regression [RMarkdown](predictfinish.Rmd) -- [Report](predictfinish.pdf)
-
-
-# Getting R to work in iPython
-
-First, install R extension
-
-```
-pip install rpy2
-```
-
-Then in the iPython notebook, reference the extension:
-
-```
-%load_ext rpy2.ipython
-```
-
-Then in a given cell
-
-```
-%R executes a single line of R
-```
-
-and
-
-```
-%%R
-# makes the whole cell into an R cell
-```
-
+[Latest Writeup](writeup.pdf)
 
 
 # git Notes

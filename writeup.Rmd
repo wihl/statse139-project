@@ -22,6 +22,11 @@ output: pdf_document
 
 # Common Functions
 
+
+percent <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
 create_folds = function (df, k){
   # Perform k-Fold Cross Validation and return average score
   # Inspired by Scikit-Learn's cross_val_score
@@ -56,6 +61,9 @@ k = 10
 
 # Read in the data for multiple years
 dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+dfm$Age2014 = NULL # remove unneeded column which is mostly NA
+ok = complete.cases(dfm)
+dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
@@ -68,15 +76,13 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 Boston Marathon Runners are very concerned about their finish times, moreso than many other races. Boston has a limited course size,
 constrainted by the 30' width of road in Hopkington, MA ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)).
-Due to the limitation, Boston has to be very selective in the choice of runners and has put restrictive qualifying times in order
-to run the marathon ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
-the Boston Marathon, not only does an applicant had to have run a previous qualifying marathon, the candidate must also had to finish
+Due to this limitation, the B.A.A. has to be very selective in the choice of runners and has established restrictive qualifying times ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
+the Boston Marathon, not only does an applicant need to run a previous qualifying marathon, but must also finish
 much faster than the typical marathoner. While other races like New York and Chicago have increased their participation size significantly
 in recent years, Boston is currently and the foreseeable future restricted to approximately 27,000 runners.
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
-# Ref: http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
@@ -95,7 +101,7 @@ Boston(**)              `r men`             `r women`
 (**) See Data Sources, below
 
 Boston is also known as a hilly course so a candidate who may have run a fast race on a flat course would be challenged by New England's
-rolling hills, especally between miles 16-21, which is among the most difficult of the course. The peak of course is affectionately known
+rolling hills, especally between miles 16-21, which are among the most difficult of the course. The peak is affectionately known
 as Heartbreak Hill.
 
 For all these reasons plus the long history of the race, the Boston Marathon is a very prestigious event in the running community. 
@@ -104,22 +110,51 @@ a marathon requires.
 
 ## Data Sources
 
-We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data set contained that split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom Python scraper. 
 
 ## Methodology
 
 We are attempting to build the most accurate prediction model possible on the smallest amount of interesting data. We are not attempting to 
 infer or analyze the data extensively. Our method consists of the following steps:
 
+1. Data Cleansing
 1. Create a baseline regression using OLS
 1. Analyze the data and perform appropriate transformations
 1. Cluster the data into subgroups using unsupervised learning, such as $k$-means
 1. Verify the improved accuracy of our predictions.
 
-Throughout we will be using 10-fold cross validation testing with sum of squares errors as the metric to improve.
+Throughout we will be using 10-fold cross validation testing with sum of squares errors as the key quality metric.
 
+## Data Cleansing
 
-## Step 1: Baseline Regression
+Even though we downloaded the data from another study that had performed some scrubbing, we needed to perform additional data cleansing.
+We had to eliminate any rows that were missing any split times as imputation might have tainted the predictive model. Since we were using 
+$k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample. Finally, gender had a
+value of {1, 2} which we had to convert into a factor in R.
+
+### Removing Outliers
+
+```{r echo=FALSE}
+# Remove outliers (5k > 3 sigma from mean)
+hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
+mean5k = mean(dfm$K0.5)
+sd5k = sd(dfm$K0.5)
+outliers5k = dfm$K0.5>(mean5k + 3*sd5k)
+outliers5ksum = sum(outliers5k)
+dfm.rows = nrow(dfm)
+dfm = dfm[!outliers5k,]
+malepct = table(dfm$Gender1F2M)[2]  / (table(dfm$Gender1F2M)[2] + table(dfm$Gender1F2M)[1])
+```
+
+As the histogram reveals, there are several outliers in 5k split times. These could be due to timing errors,
+an injury or accident at the start of the race. Due to OLS sensitivity, we elected to remove outliers
+that were more than three standard deviations greater than the mean. In total there were `r outliers5ksum` rows like this out of 
+`r dfm.rows` (`r percent(outliers5ksum / as.numeric(dfm.rows))`).
+
+Age was in the range [18,81]. (The minimum age to run the Boston Marathon is 18). No outliers were removed. Males represented
+`r percent(malepct)` of total runners, which seemed reasonable.
+
+## Baseline Regression
 ```{r echo=FALSE, results="hide"}
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
@@ -127,87 +162,152 @@ score = c()
 
 # Baseline regression
 base.mod = lm(totaltime~.,data=dfm)
-summary(base.mod)
 
 # get baseline score 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  model = lm(totaltime~.,data=train)
-  score[i] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+  cvmodel = lm(totaltime~.,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean = mean(score)
 ```
 
-We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time.
+We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time. The response variable
+is the finish time in minutes.
+
+The baseline model was quite good, but we felt we could do better.
+
+```{r echo=FALSE}
+summary(base.mod)
+```
 
 Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)`
 or approximately `r as.integer(sqrt(score.mean))` minutes.
 While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
 it makes a significant difference in terms of ability to qualify for Boston.
 
-## Step 2: Examination of the data and transformations.
+## Examination of the Data and Transformations
+
+```{r echo=FALSE,fig.height=2.5}
+# Display histograms of response variable untransformed and log transformed
+par(mfrow=c(1,2))
+hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
+hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
+```
+
+The untransformed data appears slightly right skewed. A log transformation of the response variable would result in a more normal distribution.
+
+We then examined the base model regression diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
+
+```{r echo=FALSE,fig.height=5,fig.width=6}
+par(mfrow=c(2,2))
+plot(base.mod, pch=23 ,bg="seashell",cex=.8)
+```
+
+Given the right tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right skewness of the finish time histogram,
+we elected to perform a log transformation of the response variable.
+
 
 ```{r echo=FALSE}
-#par(mfrow=c(2,2))
-#plot(model, pch=23 ,bg="chocolate1",cex=.8)
+# Try regression on log(response)
+dfm$logtotaltime = log(dfm$totaltime)
+folds = create_folds(dfm,k)
+score = c()
 
+tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
 
-#y.hat = predict(base.mod)
-#xydata = data.frame(x=y.hat, y=resid(base.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
+
+  cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
+  score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
+}
+score.mean = mean(score)
+
 ```
 
 
-```{r echo=FALSE}
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)`
+or approximately `r as.integer(sqrt(score.mean))` minutes, a neglible improvement.
 
-#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
-#y.hat = predict(tx.mod)
-#xydata = data.frame(x=y.hat, y=resid(tx.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-#par(mfrow=c(2,2))
-#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
+$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equally small amount.
+
+We also attempted a range of polynominal transformations of the 5K time using an exponent in the range [1.0,2.5] but this did not improve model accuracy
+significantly. For report brevity, these results have been omitted but are available upon request (and can be found in the project GitHub site - See Appendix B).
+
+## Clustering the Data into Subgroups
+
+```{r echo=FALSE,warning=FALSE, message=FALSE}
+# Clustering the Data into Subgroups
+# Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+
+minclusters = 3
+maxclusters = 20
+overallclustererror = c()
+for (num_clusters in minclusters:maxclusters) {
+  fit.km <- kmeans(dfm, num_clusters)
+  meanclustererror = c()
+  # Find cv score for each cluster
+  for (i in 1:num_clusters){
+    df = dfm[ fit.km$cluster == i, ]
+    folds = create_folds(df,k)
+    foldscore = c()
+    for (j in 1:k) {
+      train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
+      test = df[folds[j,"test_start"]:folds[j,"test_end"],]
+
+      model = lm(totaltime~.-logtotaltime,data=train)
+      foldscore[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
+    }
+    meanclustererror[i] = mean(foldscore)
+  }
+  # store mean error for a given k clusters
+  overallclustererror[num_clusters-2] = mean(meanclustererror)
+}
 ```
-Some preliminary EDA of the data:
 
-The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
+Since the transformation yielded only a small improvement, we elected to try clustering the data into subgroups using $k$-Means. We attempted
+$k = [`r minclusters`,`r maxclusters`]$.
 
-
-That seems better.
-
-Let's try a multiple regression on the log transformed data:
-
-
-Our transformed mean error is 
-
-
-
-Let's plot the residuals vs predicted
-
-This appears to be spreading out and trending up. 
-
-Let's try a polynomial transformation on the 5k time to see if that improves things:
-
-## Step 3: Clustering the Data into Subgroups
-
-Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
+By clustering, the resulting error rates decreased significantly. Using $k=3$, the mean error rate was `r as.integer(overallclustererror[1])` or $\pm$ 
+`r as.integer(sqrt(overallclustererror[1]))` min. At $k=20$, the mean error rate was `r as.integer(overallclustererror[maxclusters - minclusters + 1])`
+or $\pm$ `r as.integer(sqrt(overallclustererror[maxclusters - minclusters + 1]))` min, a significant improvement.
 
 ```{r echo=FALSE}
-# Warning: this takes awhile to run because it includes all data points
+# TODO fix x axis of plot because it is off by -2
+plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
+```
+
+Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number
+of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
+`r as.integer(sqrt(overallclustererror[6]))` min, which is approximately half the error as compared to unclustered linear regression.
+
+
+```{r echo=FALSE}
+# Show the resulting clusters
+#fit.km <- kmeans(dfm, 8)
 # install.packages("fpc")
 #library(fpc)
-#plotcluster(dfm2, fit.km$cluster)
+#plotcluster(dfm, fit.km$cluster)
 ```
 
-**Note: as you can see, the unsupervised learning found groupings that would have difficult if not
-impossible to us to find on our own**
+TODO: As you can see, the unsupervised learning found groupings that would have difficult if not
+impossible to us to find on our own.
 
-## Conclusion
+## Conclusion and Next Steps
 
-By transforming and subsetting the data we were able to bring down the size of the residuals significantly and improve the accuracy of the model...
+By subsetting the data, we were able to bring down the cross validation error significantly and improve the accuracy of the model.
+
+Potential next steps of this project include:
+
+* Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)).
+* Attempt other algorithms of regression, such as Random Forests.
+* Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
+accurate than what is currently available to runners.
+
 
 # Appendix A - Code
 
@@ -218,5 +318,18 @@ The following is the code used to prepare this report:
 
 # Appendix B - References
 
+This entire project code including source data can be found on GitHub ([https://github.com/wihl/statse139-project](https://github.com/wihl/statse139-project))
+
+[K-Means Clustering in R Sample Code](https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/)
+
+### R Packages Used
+
+[fpc](https://cran.r-project.org/web/packages/fpc/fpc.pdf) used to plot clusters
+
+### Solutions Found on StackOverflow
+
 [Place R Code in Appendix](http://stackoverflow.com/questions/33485893/create-appendix-with-r-code-in-rmarkdown-knitr)
 
+[Takes mean by subgroup in R](http://stats.stackexchange.com/questions/8225/how-to-summarize-data-by-group-in-r)
+
+[Formatting R Values as Percent](http://stackoverflow.com/questions/7145826/how-to-format-a-number-as-percentage-in-r)
