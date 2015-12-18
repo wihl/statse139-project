@@ -65,13 +65,25 @@ a marathon requires.
 
 We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for 69923 runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
 
+## Methodology
+
+We are attempting to build the most accurate prediction model possible on the smallest amount of interesting data. We are not attempting to 
+infer or analyze the data extensively. Our method consists of the following steps:
+
+1. Create a baseline regression using OLS
+1. Analyze the data and perform appropriate transformations
+1. Cluster the data into subgroups using unsupervised learning, such as $k$-means
+1. Verify the improved accuracy of our predictions.
+
+Throughout we will be using 10-fold cross validation testing with sum of squares errors as the metric to improve.
+
 
 ## Step 1: Baseline Regression
 We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time.
 
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline score of 240 or approximately 15 minutes.
-
-Since a 
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of 240 or approximately 15 minutes.
+While $\pm$ 15 minutes over the course of a four hour race may not seem like a large error, it makes a significant difference in terms of ability
+to qualify for Boston.
 
 
 ```{r echo=FALSE}
