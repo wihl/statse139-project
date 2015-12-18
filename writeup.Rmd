@@ -11,21 +11,93 @@ abstract: |
 output: pdf_document
 ---
 
-## Baseline
+```{r echo=FALSE}
+# NOTE: All writeup and visualizations will go into this file.
+#       All basic calculations and explorations will go into the appendices.
+
+dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
+dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
+dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
+```
+
+## Objectives and Motivation
+
+Boston Marathon Runners are very concerned about their finish times, moreso than many other races. Boston has a limited course size,
+constrainted by the 30' width of road in Hopkington, MA ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)).
+Due to the limitation, Boston has to be very selective in the choice of runners and has put restrictive qualifying times in order
+to run the marathon ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
+the Boston Marathon, not only does an applicant had to have run a previous qualifying marathon, the candidate must also had to finish
+much faster than the typical marathoner. While other races like New York and Chicago have increased their participation size significantly
+in recent years, Boston is currently and the foreseeable future restricted to approximately 27,000 runners.
+
+```{r echo=FALSE}
+# Find mean finish time by gender
+agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
+men = as.integer(agg$x[2])
+women = as.integer(agg$x[1])
+```
+
+
+
+Mean Finish Time    Men         Women
+---------------    ---------    -------
+Worldwide(*)       253           282   
+Boston(**)         `r men`             `r women`
+
+
+(*) [The Guardian](http://www.theguardian.com/lifeandstyle/the-running-blog/2015/apr/21/marathons-by-numbers-running-the-data)
+
+(**) See Data Sources, below
+
+Boston is also known as a hilly course so a candidate who may have run a fast race on a flat course would be challenged by New England's
+rolling hills, especally between miles 16-21, which is among the most difficult of the course. The peak of course is affectionately known
+as Heartbreak Hill.
+
+For all these reasons plus the long history of the race, the Boston Marathon is a very prestigious event in the running community. 
+Forecasting an accurate finish time in the race is a key motivator for runners to improve their time during the hundreds of miles of training
+a marathon requires.
+
+## Data Sources
 
 We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html)  from a group of researchers University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticpated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due the bombings at the finish line. This data sat contained that split and finish times for 69923 runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/)  using a custom python scraper. 
 
 
-First let's read in the data and calculate finish times:
-
-
 ## Step 1: Baseline Regression
+We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time.
 
-Our baseline mean error is _whatever_, or approximately 15 minutes.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline score of 240 or approximately 15 minutes.
 
+Since a 
+
+
+```{r echo=FALSE}
+#par(mfrow=c(2,2))
+#plot(model, pch=23 ,bg="chocolate1",cex=.8)
+
+
+#y.hat = predict(base.mod)
+#xydata = data.frame(x=y.hat, y=resid(base.mod))
+#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
+#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+```
 
 ## Step 2: Examination of the data and transformations.
 
+
+```{r echo=FALSE}
+
+#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
+#y.hat = predict(tx.mod)
+#xydata = data.frame(x=y.hat, y=resid(tx.mod))
+#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
+#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
+#par(mfrow=c(2,2))
+#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
+```
 Some preliminary EDA of the data:
 
 The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
@@ -50,7 +122,12 @@ Let's try a polynomial transformation on the 5k time to see if that improves thi
 
 Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
 
-
+```{r echo=FALSE}
+# Warning: this takes awhile to run because it includes all data points
+# install.packages("fpc")
+#library(fpc)
+#plotcluster(dfm2, fit.km$cluster)
+```
 
 **Note: as you can see, the unsupervised learning found groupings that would have difficult if not
 impossible to us to find on our own**

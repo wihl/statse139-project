@@ -1,4 +1,4 @@
-
+# Step 1 - baseline regression
 create_folds = function (df, k){
   # Perform k-Fold Cross Validation and return average score
   # Inspired by Scikit-Learn's cross_val_score
@@ -8,7 +8,6 @@ create_folds = function (df, k){
   
   train1_start = train1_end = train2_start = train2_end = test_start = test_end = c()
   testsize = nrow(df) / k 
-#  cat("train1 start \t train1_end \t test_start \t test_end \t train2_start \t train2_end \n")
   for (i in 1:k){
     if (i < k){
       train1_start[i] = 1
@@ -25,10 +24,6 @@ create_folds = function (df, k){
       train2_start[i] = ceiling((k-i+1) * testsize)
       train2_end[i] = nrow(df)
     }
-#    cat(train1_start, "\t\t",train1_end,
-#        "\t\t", test_start, "\t\t", test_end,
-#        "\t\t",train2_start, "\t\t", train2_end,"\n")
-    
   }
   return (data.frame(train1_start, train1_end, train2_start, train2_end, test_start, test_end))
 }
@@ -41,8 +36,9 @@ dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
-#dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
+dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
@@ -62,23 +58,12 @@ for (i in 1:k) {
 }
 cat ("Baseline mean score is: ", mean(score),"\n")
 
-#par(mfrow=c(2,2))
-#plot(model, pch=23 ,bg="chocolate1",cex=.8)
-
-
-#y.hat = predict(base.mod)
-#xydata = data.frame(x=y.hat, y=resid(base.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-
-## Step 2: Examination of the data and transformations.
+# Step 2: Examination of the data and transformations.
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Boston Marathon Finish Time (min) Distribution for '10, '11, '13")
 
 #The data appears somewhat right skewed. Let's try a log transform of the predicted variable:
 hist(log(dfm$totaltime),breaks=50, main="Boston Marathon Finish Time (log-min) Distribution for '10, '11, '13")
-
-# That seems better.
 
 # Let's try a multiple regression on the log transformed data:
 tx.mod = lm(log(totaltime)~., data=dfm)
@@ -93,15 +78,6 @@ for (i in 1:k) {
   score[i] = sum((test$totaltime - exp(predict(model,new=test)))^2) / as.numeric(nrow(test))
 }
 cat ("Log transformed mean score is: ", mean(score),"\n")
-
-
-#plot(dfms$totaltime,model.resid,ylim=c(-100,100))
-#y.hat = predict(tx.mod)
-#xydata = data.frame(x=y.hat, y=resid(tx.mod))
-#xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
-#plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="Predicted", ylab="Residuals")
-#par(mfrow=c(2,2))
-#plot(tx.mod, pch=23 ,bg="chocolate1",cex=.8)
 
 #bestresidsum = 9e9
 #bestpoly = 0
@@ -121,20 +97,9 @@ cat ("Log transformed mean score is: ", mean(score),"\n")
 #xydata = data.frame(x=dfms$totaltime, y=bestresid)
 #xydata = xydata[sample(1:nrow(xydata), 5000, replace=FALSE),]
 #plot(xydata$x,xydata$y,ylim=c(-100,100), xlab="total time(min)", ylab="Residuals")
-
+# Step 3: Clustering the Data into Subgroups
+#Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
 # Code inspired from https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/
-
-# Warning: using NbClust never finished even when I tried 2-4 instead of 2-15 clusters.
-# install.packages("NbClust")
-#library(NbClust)
-#nc <- NbClust(data=dfm2,
-#              min.nc=2, max.nc=4,
-#              method="kmeans")
-#barplot(table(nc$Best.n[1,]),
-#        xlab="Numer of Clusters",
-#        ylab="Number of Criteria",
-#        main="Number of Clusters Chosen by 26 Criteria")
-
 
 for (num_clusters in 4:20) {
   fit.km <- kmeans(dfm, num_clusters)
@@ -156,7 +121,3 @@ for (num_clusters in 4:20) {
   }
   cat ("Mean error rate overall:", mean(overall),"\n\n")
 }
-# Warning: this takes awhile to run because it includes all data points
-# install.packages("fpc")
-#library(fpc)
-#plotcluster(dfm2, fit.km$cluster)
