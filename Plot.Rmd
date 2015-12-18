@@ -1,0 +1,53 @@
+---
+title: "Plot"
+output: pdf_document
+---
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#################CODE from BASE###########
+dfm <- read.csv("/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+times = as.matrix(dfm[,7:15], ncol=9)
+dfm$totaltime = rowSums(times)
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
+
+#Baseline regression
+base.mod = lm(totaltime~.,data=dfm)
+#summary(base.mod)
+```
+Using the base regression model \textbf{lm(totaltime $\sim$ Age+Gender1F2M+K0.5)}, 
+\newline
+the equation of the fillted regression line is
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#################NEW CODE###########
+#Estimated Fitted line Equation using base model
+print(paste("TotalTime = ", round(base.mod$coeff[1], digits = 3), " + ", round(base.mod$coeff[2],  digits = 3), "*AGE + ",
+            round(base.mod$coeff[3],  digits = 3), "*Gender1F2M + ", round(base.mod$coeff[4],  digits = 3), "*K0-5 ", sep = "")) 
+```
+The plot of TotalTime vs first K0-5 split time with regression line of base model is seen as below
+\newline
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2) 
+
+#TotalTime vs K0-5 with regression line of base model
+ggplot(dfm, aes(x = K0.5, y = totaltime)) + geom_point(shape = 1) + 
+geom_smooth(method = lm, aes(x = K0.5, y = predict(base.mod)), se = FALSE) + 
+labs(list(title = "TotalTime vs K0-5 with regression line of base model", x = "K0-5", y = "Total Time")) +
+theme(legend.title = element_text(size=6, face="bold"))
+```
+\newpage
+Next, we plot the regression line of females vs. males at age 40 based on the base regression model. The plot suggest the slopes are nearly identical as they are overlapping.
+\newline
+\newline
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Female Vs. Male regression line slopes at age 40
+ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(Gender1F2M))) + geom_point(shape = 1) +
+  geom_abline(aes(Age = "Female at age 40"), intercept = base.mod$coeff[1] + 40*base.mod$coeff[2] + base.mod$coeff[3], slope = base.mod$coeff[4], show_guide = TRUE) +
+  geom_abline(aes(Age = "Male at age 40"), intercept = base.mod$coeff[1] + 40*base.mod$coeff[2] + 2*base.mod$coeff[3], slope = base.mod$coeff[4], show_guide = TRUE) +
+  labs(list(title = "Female Vs. Male regression line slopes at age 40", x = "K0-5", y = "Total Time")) +
+  theme(legend.title = element_text(size=6, face="bold")) +
+  scale_color_discrete(name="Females Vs. Male at Age 40")
+```
+Note: If you add extra noise to the male intercept, you can actually see that its two different lines.
+
