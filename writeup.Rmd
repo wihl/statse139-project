@@ -7,7 +7,7 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-    We want to build a reasonably accurate model for predicting Boston Marathon finish times based on gender, age on 5k split times. We will build a baseline using untransformed linear regression. Then, we will analyze the data and perform appropriate transformations. After transforming the data, we will cluster the data into different subgroups using unsupervised learning algorithms. Finally, we will run different regression algorithms on the transformed and subsetted data to see our improvements over the baseline.
+    We wanted to build a reasonably accurate model for predicting Boston Marathon finish times based on a runner's gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Then, we analyzed the data and performed appropriate transformations. After transforming the data, we clustered the race results into *BLANK* different subgroups using an unsupervised learning algorithms. Using these different clusters of race results, we then subseted our dataset into *BLANK* different subsets and generated a new regression model for each subset. Finally, we compared the accuracy of predictions made via our segmented regression model with our baseline model.
 output: pdf_document
 ---
 
