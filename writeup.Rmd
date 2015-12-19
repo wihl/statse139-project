@@ -132,7 +132,7 @@ Even though we downloaded our primary data from another study where the research
 
 ### Set aside a validation set. 
 
-In order to maintain the ability confirm the accuracy of our final model on unseen data, we set-aside 10% of our dataset as a validation set.  
+In order to maintain the ability confirm the accuracy of our final model on unseen data, we set-aside 10% of our Boston dataset as a validation set.  
 
 ```{r echo=FALSE}
 #Set aside 10% of our data as a validation set 
@@ -183,7 +183,7 @@ for (i in 1:k) {
 score.mean.5k = mean(score)
 ```
 
-We ran a simple OLS regression model using all the Boston data. The predictor variables were age, gender (as a factor), and 5k split time. The response variable was the finish time in minutes.
+We ran a simple OLS regression model using the training portion of our Boston data. The predictor variables were age, gender (as a factor), and 5k split time. The response variable was the finish time in minutes.
 
 The baseline model was quite good, but we felt we could do better.
 
@@ -307,7 +307,7 @@ Since the transformation yielded only a small improvement, we elected to try clu
 $k = [`r minclusters`,`r maxclusters`]$.
 
 By clustering, the resulting error rates decreased significantly. Using $k=3$, the mean error rate was `r as.integer(overallclustererror[1])` or $\pm$ 
-`r as.integer(sqrt(overallclustererror[1]))` min. At $k=20$, the mean error rate was `r as.integer(overallclustererror[maxclusters - minclusters + 1])`
+`r as.integer(sqrt(overallclustererror[1]))` min. At $k=20$, the mean error rate on the training dataset was `r as.integer(overallclustererror[maxclusters - minclusters + 1])`
 or $\pm$ `r as.integer(sqrt(overallclustererror[maxclusters - minclusters + 1]))` min, a significant improvement.
 
 ```{r echo=FALSE}
@@ -316,7 +316,7 @@ plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV E
 ```
 
 Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
-`r as.integer(sqrt(overallclustererror[6]))` min, which is approximately half the error as compared to unclustered linear regression.
+`r as.integer(sqrt(overallclustererror[6]))` min on tn the training dataset, which is approximately half the error as compared to unclustered linear regression. 
 
 
 ```{r echo=FALSE}
