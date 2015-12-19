@@ -342,7 +342,14 @@ The number of runners two $\sigma$ faster than the mean is `r sum(dfm$fastrunner
 right skewness to the data). The difference in slope for fast vs. slow runners is indicative that
 a single regression model could be improved upon.
 
-However, it’s important to note that the cluster identifications in our training data were themselves based on groupings that aimed to minimize the multidimensional distances between age, gender, 5k split time, **as well as our explanatory variable, final finish time**. By building OLS regression models on the subset of race results that represents each cluster, and then analyzing the mean error rate across our cluster-specific models on the training data, we run the risk that a runner’s final finish time has effectively “leaked” into our model as a predictor variable through the cluster identification. This could lead to an overly optimistic reduction in mean squared error on the training data that’s not possible to recreate on unseen data where a runner’s cluster is not known in advance.
+```{r echo=FALSE}
+# Show the resulting clusters
+ggplot(dfm, aes(x = Age, y = K0.5, color=factor(cluster))) + geom_point(shape=1) +
+  labs(list(title = "Cluster Vs. Runner Age Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) 
+```
+
+Even when we look at the clusters without include our explanatory variable (Final finish time). as we do in the chart above, at appears there are significant distinctions based on age, gender, and 5k split time that we should be able to classify runners and gain additional predictive power. 
 
 ## Applying the Model to Chicago Data
 ```{r echo=FALSE}
@@ -359,14 +366,22 @@ for (i in 1:length(fit.km$size)) {
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
 dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
 dfChi <- rbind(dfChi14,dfChi15)
+
+
 dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # added converter to assign.cluster to handle gender as factor
 Chitimes = as.matrix(dfChi[,7:15], ncol=9)
+dfChi$StartHr = NULL
+dfChi$StartMin = NULL
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
-dfChi = dfChi[!is.na(dfm$totaltime), ]
+#Filter out any rows with NAs -- they'll cause headachs later 
+dfChi = dfChi[!is.na(dfChi$totaltime), ]
+dfChi = dfChi[!is.na(dfChi$HalfMar), ]
+dfChi = dfChi[!is.na(dfChi$K0.5), ]
+dfChi = dfChi[!is.na(dfChi$Age), ]
 
 #Draw a random sample 
-dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
+dfChi = dfChi[sample(nrow(dfChi), 2500), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
 # Remove outliers
 mean5k = mean(dfChi$K0.5)
 sd5k = sd(dfChi$K0.5)
@@ -374,21 +389,18 @@ outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
 dfChi = dfChi[!outliers5k,]
 ```
 
-Build svm Classifier
-```{r}
-
-dfm_train_clus <- cbind(dfm_clus, Cluster = fit.km$cluster)
-dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
-dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
-dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
-library(kernlab)
-svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
-svm 
+```{r echo=FALSE}
+# Build svm Classifier 
+# dfm_train_clus <- cbind(dfm_clus, Cluster = fit.km$cluster)
+# dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
+# dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
+# dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
+# library(kernlab)
+# svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
+# svm 
 
 ```
 
-
-Test models 
 ```{r echo=FALSE}
 assign.cluster <- function(df, centers) {
   # compute squared euclidean distance from each sample to each cluster center
@@ -422,28 +434,31 @@ predict.finish <- function(df) {
 
 # Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
 assign.SSE <- function(df){
+  
   y.hat.base = predict(base.mod,new=df)
   y.hat.half = predict(base.mod.half,new=df)
+  df$logtotaltime = log(df$totaltime)
+  y.hat.log = exp(predict(tx.mod,new=df))
   
   base.mod.SSE <- as.integer(sqrt(sum((y.hat.base - df$totaltime)^2) / nrow(df)))
+  log.mod.SSE <- as.integer(sqrt(sum((y.hat.log - df$totaltime)^2) / nrow(df)))
   half.mod.SSE <- as.integer(sqrt(sum((y.hat.half - df$totaltime)^2) / nrow(df)))
   clus.mod.SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
-
-  return (list("base.mod" = base.mod.SSE,"half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
+  
+  return (list("base.mod" = base.mod.SSE, "log.mod"=log.mod.SSE, "half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
 } 
 
 # Test on Chicago sameple 
 # find which cluster would be most appropriate
-#dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
-dfChi$Cluster = predict(svm,dfChi )
+# dfChi$Cluster = predict(svm,dfChi )
 
-
-# Caculate prediction error 
+dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
 SSE.Chi = assign.SSE(dfChi)
 
 # Test on our validation set: 
-#validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
-validate_dfm$Cluster = predict(svm,validate_dfm)
+# validate_dfm$Cluster = predict(svm,validate_dfm)
+
+validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
 SSE.Bos.validate = assign.SSE(validate_dfm)
 
 ```
@@ -455,16 +470,18 @@ The SSE using clustering and individual regression models is `r SSE.Chi$clus.mod
 
 The following table summarizes our results:
 
-Method                    Mean Error (min)
-------                    ----------------
-Baseline 5k               `r as.integer(sqrt(score.mean.5k))`
-Baseline Half Marathon    `r as.integer(sqrt(score.mean.half))`
-Log(y) Transform 5k       `r as.integer(sqrt(score.mean.tx))`
-8-Fold Cluster            `r as.integer(sqrt(overallclustererror[6]))`
+Method                    Mean Error Train (min)                        Mean Error Validate             Mean Error Chicago 
+------                    ----------------                              -------------------------       -------------------
+Baseline 5k               `r as.integer(sqrt(score.mean.5k))`           `r SSE.Bos.validate$base.mod`   `r SSE.Chi$base.mod`
+Baseline Half Marathon    `r as.integer(sqrt(score.mean.half))`         `r SSE.Bos.validate$half.mod`   `r SSE.Chi$half.mod`
+Log(y) Transform 5k       `r as.integer(sqrt(score.mean.tx))`           `r SSE.Bos.validate$log.mod`    `r SSE.Chi$log.mod`
+8-Fold Cluster            `r as.integer(sqrt(overallclustererror[6]))`  `r SSE.Bos.validate$clus.mod`   `r SSE.Chi$clus.mod`
 
-By subsetting the data, we were able to bring down the cross validation error significantly and improve the accuracy of the model.
+By sub setting the data by cluster, we were able to bring down the cross validation error significantly and improve the accuracy of the model on our training data. However, this improvement in accuracy did not carry over to our validation dataset (the 10% of race results we reserved from the Boston dataset) or the sample of data from the Chicago marathons. In fact, the clustering model had the largest error of any of the models we tested on both datasets. 
 
-This subset model works well for the Boston Marathon, but does not appear to generalize well for different profile marathons.
+We believe that two distinct forms of over fitting explain this outcome. First, it’s important to note that the cluster identifications in our training data were themselves based on groupings that aimed to minimize the multidimensional distances between age, gender, 5k split time, as well as our explanatory variable, final finish time. By building OLS regression models on the subset of race results that represented each cluster, and then analyzing the mean error rate across our cluster-specific models on the training data, a derivation of each runner’s final finish time leaked into our model as a predictor variable. This lead to an overly optimistic reduction in mean squared error when running cross validations on our training data alone. This would not be a problem if we were then able to reliably classify runners into an appropriate cluster based on our primary predictor variables alone. Unfortunately we were unable to do this with enough accuracy to add real additional predictive power to our model through estimated cluster classification. Thus, the reduction in mean squared error we saw when running cross validations on our training data was impossible to recreate on unseen data where a runner’s cluster-classification was not known in advance. 
+
+The second way we over fit our data has to do with the race it self.  While it does not beat our other models, the clustering model still works significantly better for the Boston validation data set than the Chicago validation set. Our clustering process may have homed in on timing characteristics that are specific to the Boston Marathon and our model does not appear to generalize well to different profile marathons.
 
 Potential next steps of this project include:
 

@@ -105,7 +105,7 @@ for (i in 1:k) {
   score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean.half = mean(score)
-dfm$HalfMar = NULL # Remove half marathon column as it is no longer needed
+## dfm$HalfMar = NULL # Added this back in so we can use it in the final comparison of models
 # Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
@@ -123,7 +123,7 @@ for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
+  cv.tx.mod = lm(logtotaltime~.-totaltime -HalfMar,data=train)
   score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
 }
 score.mean.tx = mean(score)
@@ -134,19 +134,20 @@ score.mean.tx = mean(score)
 minclusters = 3
 maxclusters = 20
 overallclustererror = c()
+dfm_clus <- dfm[c("Age","Gender1F2M","K0.5","totaltime")] #Ensure that we're clustering on our predictors and total time only
 for (num_clusters in minclusters:maxclusters) {
-  fit.km <- kmeans(dfm, num_clusters)
+  fit.km <- kmeans(dfm_clus, num_clusters)
   meanclustererror = c()
   # Find cv score for each cluster
   for (i in 1:num_clusters){
-    df = dfm[ fit.km$cluster == i, ]
+    df = dfm_clus[ fit.km$cluster == i, ]
     folds = create_folds(df,k)
     foldscore = c()
     for (j in 1:k) {
       train = df[c(folds[j,"train1_start"]:folds[j,"train1_end"],folds[j,"train2_start"]:folds[j,"train2_end"]),]
       test = df[folds[j,"test_start"]:folds[j,"test_end"],]
 
-      model = lm(totaltime~.-logtotaltime,data=train)
+      model = lm(totaltime~.,data=train)
       foldscore[j] = sum((test$totaltime - predict(model,new=test))^2) / as.numeric(nrow(test))
     }
     meanclustererror[i] = mean(foldscore)
@@ -157,7 +158,7 @@ for (num_clusters in minclusters:maxclusters) {
 # TODO fix x axis of plot because it is off by -2
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
 # Show the resulting clusters
-fit.km = kmeans(dfm, 8)
+fit.km = kmeans(dfm_clus, 8)
 dfm$cluster = fit.km$cluster
 # Create indicator variables for fast and slow runners to plot different slopes
 mean.total = mean(dfm$totaltime)
@@ -170,6 +171,10 @@ ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(sh
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
   geom_abline(intercept = 37, slope = 6,color="red") +
   geom_abline(intercept = 37, slope = 3,color="blue")
+# Show the resulting clusters
+ggplot(dfm, aes(x = Age, y = K0.5, color=factor(cluster))) + geom_point(shape=1) +
+  labs(list(title = "Cluster Vs. Runner Age Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) 
 # Save the different regression models per cluster
 clust.mod = c()
 for (i in 1:length(fit.km$size)) {
@@ -183,19 +188,36 @@ for (i in 1:length(fit.km$size)) {
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
 dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
 dfChi <- rbind(dfChi14,dfChi15)
+
+
 dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # added converter to assign.cluster to handle gender as factor
 Chitimes = as.matrix(dfChi[,7:15], ncol=9)
+dfChi$StartHr = NULL
+dfChi$StartMin = NULL
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
-dfChi = dfChi[!is.na(dfm$totaltime), ]
+#Filter out any rows with NAs -- they'll cause headachs later 
+dfChi = dfChi[!is.na(dfChi$totaltime), ]
+dfChi = dfChi[!is.na(dfChi$HalfMar), ]
+dfChi = dfChi[!is.na(dfChi$K0.5), ]
+dfChi = dfChi[!is.na(dfChi$Age), ]
 
 #Draw a random sample 
-dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
+dfChi = dfChi[sample(nrow(dfChi), 2500), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
 # Remove outliers
 mean5k = mean(dfChi$K0.5)
 sd5k = sd(dfChi$K0.5)
 outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
 dfChi = dfChi[!outliers5k,]
+# Build svm Classifier 
+# dfm_train_clus <- cbind(dfm_clus, Cluster = fit.km$cluster)
+# dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
+# dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
+# dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
+# library(kernlab)
+# svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
+# svm 
+
 assign.cluster <- function(df, centers) {
   # compute squared euclidean distance from each sample to each cluster center
   # There is probably a vectorized way of doing this.
@@ -228,20 +250,30 @@ predict.finish <- function(df) {
 
 # Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
 assign.SSE <- function(df){
+  
+  y.hat.base = predict(base.mod,new=df)
+  y.hat.half = predict(base.mod.half,new=df)
+  df$logtotaltime = log(df$totaltime)
+  y.hat.log = exp(predict(tx.mod,new=df))
+  
+  base.mod.SSE <- as.integer(sqrt(sum((y.hat.base - df$totaltime)^2) / nrow(df)))
+  log.mod.SSE <- as.integer(sqrt(sum((y.hat.log - df$totaltime)^2) / nrow(df)))
+  half.mod.SSE <- as.integer(sqrt(sum((y.hat.half - df$totaltime)^2) / nrow(df)))
   clus.mod.SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
-  y.hat = predict(base.mod,new=df)
-  base.mod.SSE <- as.integer(sqrt(sum((y.hat - df$totaltime)^2) / nrow(df)))
-  return (list("clus.mod" = clus.mod.SSE, "base.mod" = base.mod.SSE))
+  
+  return (list("base.mod" = base.mod.SSE, "log.mod"=log.mod.SSE, "half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
 } 
 
 # Test on Chicago sameple 
 # find which cluster would be most appropriate
-dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+# dfChi$Cluster = predict(svm,dfChi )
 
-# Caculate prediction error 
+dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
 SSE.Chi = assign.SSE(dfChi)
 
 # Test on our validation set: 
+# validate_dfm$Cluster = predict(svm,validate_dfm)
+
 validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
 SSE.Bos.validate = assign.SSE(validate_dfm)
 
