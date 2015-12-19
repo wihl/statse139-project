@@ -374,6 +374,21 @@ outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
 dfChi = dfChi[!outliers5k,]
 ```
 
+Build svm Classifier
+```{r}
+
+dfm_train_clus <- cbind(dfm_clus, Cluster = fit.km$cluster)
+dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
+dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
+dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
+library(kernlab)
+svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
+svm 
+
+```
+
+
+Test models 
 ```{r echo=FALSE}
 assign.cluster <- function(df, centers) {
   # compute squared euclidean distance from each sample to each cluster center
@@ -419,13 +434,16 @@ assign.SSE <- function(df){
 
 # Test on Chicago sameple 
 # find which cluster would be most appropriate
-dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+#dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+dfChi$Cluster = predict(svm,dfChi )
+
 
 # Caculate prediction error 
 SSE.Chi = assign.SSE(dfChi)
 
 # Test on our validation set: 
-validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
+#validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
+validate_dfm$Cluster = predict(svm,validate_dfm)
 SSE.Bos.validate = assign.SSE(validate_dfm)
 
 ```
