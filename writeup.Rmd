@@ -7,7 +7,7 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-    We wanted to build a reasonably accurate model for predicting Boston Marathon finish times based on a runner's gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Then, we analyzed the data and performed appropriate transformations. After transforming the data, we clustered the race results into *BLANK* different subgroups using an unsupervised learning algorithms. Using these different clusters of race results, we then subseted our dataset into *BLANK* different subsets and generated a new regression model for each subset. Finally, we compared the accuracy of predictions made via our segmented regression model with our baseline model.
+    We wanted to build a reasonably accurate model for predicting Boston Marathon finish times based on a runner's gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Then, we analyzed the data and performed appropriate transformations. After transforming the data, we clustered the race results into several different subgroups using an unsupervised learning algorithms. Using these different clusters of race results, we generated a new regression model for each subset. Finally, we compared the accuracy of predictions made via our clustered regression model with our baseline model.
 output: pdf_document
 ---
 
@@ -66,7 +66,7 @@ ok = complete.cases(dfm)
 dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
-dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5","HalfMar")] # keep only columns we need
 dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
@@ -74,7 +74,7 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 ## Objectives and Motivation
 
-Runners who participate in the Boston Marathon are very concerned about their finish times. The reason is simple. The Boston Athletic Association (BAA), which organizes the race each April, limits the field of participants to runners who are capable of completing a marathon in a very fast time. Starting in the 1970s, when the BAA was concerned that the race was becoming unwieldy as it had grown to include more than 1000 runners for the first time ([source](http://www.baa.org/races/boston-marathon/participant-information/qualifying/history-of-qualifying-standards.aspx)), the BAA established a set of qualifying times that runners had to meet([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)) in a previously timed marathon in order to be granted acceptance to the Boston race. With marathoning having grown tremendously in popularity over the following four decades, today race organizers are physically constrained by the 30’ width of the road in Hopkington, MA  ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)) where the race begins. While other races like New York and Chicago have increased their participation sizes significantly in recent years, Boston is currently, and will be for the foreseeable future, restricted to a size of approximately 27,000 runners. Thus, while the Boston Marathon course is considered one the harder marathon courses, the runners who participate are faster than average. The mean marathon finish time for Boston runners is significantly faster than the national averages: 
+Runners who participate in the Boston Marathon are very concerned about their finish times. The reason is simple. The Boston Athletic Association (BAA), which organizes the race each April, limits the field of participants to runners who are capable of completing a marathon in a very fast time. Starting in the 1970s, when the BAA was concerned that the race was becoming unwieldy as it had grown to include more than 1000 runners for the first time ([source](http://www.baa.org/races/boston-marathon/participant-information/qualifying/history-of-qualifying-standards.aspx)), the BAA established a set of qualifying times that runners had to meet([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)) in a previously timed marathon in order to be granted acceptance to the Boston race. With marathoning having grown tremendously in popularity over the following four decades, today race organizers are physically constrained by the 30’ width of the road in Hopkington, MA  ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)) where the race begins. While other races like New York and Chicago have increased their participation sizes significantly in recent years, Boston is currently, and will be for the foreseeable future, restricted to a size of approximately 27,000 runners. Thus, while the Boston Marathon course is considered one the harder marathon courses, the runners who participate are faster than average. The mean marathon finish time for Boston runners is significantly faster than global averages: 
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
@@ -117,7 +117,7 @@ Throughout we will be using 10-fold cross validation testing with sum of squares
 
 ## Data Cleansing
 
-Even though we downloaded our primary data from another study where the researchers had already performed some scrubbing, we needed to perform additional data cleansing to format the data for our needs. As our response variable (finish times) was calculated as a sum of a runners individual split times, we needed to eliminate any rows that were missing any split times as their inclusion might have tainted the predictive model. Since we were using $k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample size. Finally, gender had a value of {1, 2} which we had to convert into a factor in R.
+Even though we downloaded our primary data from another study where the researchers had already performed some scrubbing, we needed to perform additional data cleansing to format the data for our needs. As our response variable (finish times) was calculated as a sum of a runners individual split times, we needed to eliminate, rather than impute, any rows that were missing any split times as their inclusion might have tainted the predictive model. Since we were using $k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample size. Finally, gender had a value of {1, 2} which we had to convert into a factor in R.
 
 ### Removing Outliers
 
@@ -133,29 +133,30 @@ dfm = dfm[!outliers5k,]
 malepct = table(dfm$Gender1F2M)[2]  / (table(dfm$Gender1F2M)[2] + table(dfm$Gender1F2M)[1])
 ```
 
-As the histogram reveals, there were several outliers in the 5k split times. These could be due to timing errors, or an injury or accident at the start of the race. Due to the sensitivity of OLS regression, we elected to remove the outliers that were more than three standard deviations greater than the mean 5k split time. In total there were `r outliers5ksum` rows like this out of 
+As the histogram reveals, there were several outliers in the 5k split times. These could be due to timing errors, or an injury or accident at the start of the race. Due to the sensitivity of OLS regression, we elected to remove the outliers that were more than three standard deviations ($\sigma$) greater than the mean 5k split time. In total there were `r outliers5ksum` rows like this out of 
 `r dfm.rows` (`r percent(outliers5ksum / as.numeric(dfm.rows))`).
 
-Age was in the range [18,81]. (The minimum age to run the Boston Marathon is 18). No outliers were removed. Males represented `r percent(male pct)` of total runners, which seemed reasonable.
+Age was in the range [18,81]. (The minimum age to run the Boston Marathon is 18). No outliers were removed. Males represented `r percent(malepct)` 
+of total runners, which seemed reasonable.
 
-## Baseline Regression
+## Baseline Regression - 5K Split
 ```{r echo=FALSE, results="hide"}
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
 score = c()
 
 # Baseline regression
-base.mod = lm(totaltime~.,data=dfm)
+base.mod = lm(totaltime~.-HalfMar,data=dfm)
 
 # get baseline score 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  cvmodel = lm(totaltime~.,data=train)
+  cvmodel = lm(totaltime~.-HalfMar,data=train)
   score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
-score.mean = mean(score)
+score.mean.5k = mean(score)
 ```
 
 We ran a simple OLS regression model using all the Boston data. The predictor variables were age, gender (as a factor), and 5k split time. The response variable was the finish time in minutes.
@@ -166,13 +167,39 @@ The baseline model was quite good, but we felt we could do better.
 summary(base.mod)
 ```
 
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)` or approximately `r as.integer(sqrt(score.mean))` minutes.
-While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
-$\pm$ `r as.integer(sqrt(score.mean))` minutes could be the difference between qualifying and not qualifying for a competitive race such as the Boston Marathon. 
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean.5k)` or approximately `r as.integer(sqrt(score.mean.5k))` minutes.
+While $\pm$ `r as.integer(sqrt(score.mean.5k))` minutes over the course of a four hour race may not seem like a large error,
+$\pm$ `r as.integer(sqrt(score.mean.5k))` minutes could be the difference between qualifying and not qualifying for a competitive race such as the Boston Marathon. 
+
+## Baseline Regression - Half Marathon Split
+```{r echo=FALSE, results="hide"}
+# Half Marathon Baseline regression
+base.mod.half = lm(totaltime~.-K0.5,data=dfm)
+
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
+
+  cvmodel = lm(totaltime~.-K0.5,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
+}
+score.mean.half = mean(score)
+```
+
+As a comparison, we also ran a regression using half marathon instead of 5k split time. The sum of squares error
+for each fold resulted in a baseline mean score of `r as.integer(score.mean.half)` or approximately 
+`r as.integer(sqrt(score.mean.half))` minutes, a significant improvement. $R^2$ went from
+`r summary(base.mod)$r.squared` to `r summary(base.mod.half)$r.squared`. 
+Adjusted $R^2$ improved from `r summary(base.mod)$adj.r.squared` to 
+`r summary(base.mod.half)$adj.r.squared`.
+
+Clearly, estimating the finish halfway through the race is far more accurate than the initial 5k split. While this may be useful to someone planning
+to meet the runner at the finish, we felt it would be more challenging to minimize prediction errors using the 5k split time.
 
 ## Examination of the Data and Transformations
 
 ```{r echo=FALSE,fig.height=2.5}
+dfm$HalfMar = NULL # Remove half marathon column as it is no longer needed
 # Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
@@ -205,15 +232,18 @@ for (i in 1:k) {
   cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
   score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
 }
-score.mean = mean(score)
+score.mean.tx = mean(score)
 
 ```
 
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)` or approximately `r as.integer(sqrt(score.mean))` minutes, a negligible improvement.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted
+in a log-transformed mean score of `r as.integer(score.mean.tx)` or approximately 
+`r as.integer(sqrt(score.mean.tx))` minutes, a negligible improvement.
 
-$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equally small amount.
+$R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, 
+a slight improvement. Adjusted $R^2$ improved by an equally small amount.
 
-We also attempted a range of polynomial transformations on the 5K times using an exponent in the range [1.0,2.5]. However, this did not improve model’s accuracy significantly. We have omitted these results in order to be concise within the report, but they are available on our project GitHub site (See Appendix B).
+We also attempted a range of polynomial transformations on the 5K times using an exponent in the range [1.1,2.5]. However, this did not improve model’s accuracy significantly. We have omitted these results in order to be concise within the report, but they are available on our project GitHub site (See Appendix B).
 
 ## Clustering the Data into Subgroups
 
@@ -274,6 +304,15 @@ TODO: As you can see, the unsupervised learning found groupings that would have 
 impossible to us to find on our own.
 
 ## Conclusion and Next Steps
+
+The following table summarizes our results:
+
+Method                    Mean Error (min)
+------                    ----------------
+Baseline 5k               `r as.integer(sqrt(score.mean.5k))`
+Baseline Half Marathon    `r as.integer(sqrt(score.mean.half))`
+Log(y) Transform 5k       `r as.integer(sqrt(score.mean.tx))`
+8-Fold Cluster            `r as.integer(sqrt(overallclustererror[6]))`
 
 By subsetting the data, we were able to bring down the cross validation error significantly and improve the accuracy of the model.
 

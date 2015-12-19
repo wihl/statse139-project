@@ -52,7 +52,7 @@ ok = complete.cases(dfm)
 dfm = dfm[ok,] # remove rows that have any NA values
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
-dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need
+dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5","HalfMar")] # keep only columns we need
 dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
@@ -60,12 +60,6 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
-
-#Set aside 10% of our data as a validation dataset 
-indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
-dfm_validate = dfm[indexes,]
-dfm = dfm[-indexes,]
-
 # Remove outliers (5k > 3 sigma from mean)
 hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
 mean5k = mean(dfm$K0.5)
@@ -80,18 +74,30 @@ folds = create_folds(dfm,k)
 score = c()
 
 # Baseline regression
-base.mod = lm(totaltime~.,data=dfm)
+base.mod = lm(totaltime~.-HalfMar,data=dfm)
 
 # get baseline score 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  cvmodel = lm(totaltime~.,data=train)
+  cvmodel = lm(totaltime~.-HalfMar,data=train)
   score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
-score.mean = mean(score)
+score.mean.5k = mean(score)
 summary(base.mod)
+# Half Marathon Baseline regression
+base.mod.half = lm(totaltime~.-K0.5,data=dfm)
+
+for (i in 1:k) {
+  train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
+
+  cvmodel = lm(totaltime~.-K0.5,data=train)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
+}
+score.mean.half = mean(score)
+dfm$HalfMar = NULL # Remove half marathon column as it is no longer needed
 # Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
@@ -112,7 +118,7 @@ for (i in 1:k) {
   cv.tx.mod = lm(logtotaltime~.-totaltime,data=train)
   score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
 }
-score.mean = mean(score)
+score.mean.tx = mean(score)
 
 # Clustering the Data into Subgroups
 # Let's try subsetting the data set in subgroups using an unsupervised learning algorithm.
@@ -148,71 +154,3 @@ plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV E
 #library(fpc)
 #plotcluster(dfm, fit.km$cluster)
 ## 
-
-#Should we be saving this model above and reusing it? I know KNN is not deterministic but it does not seem to matter in pratice
-fit.km <- kmeans(dfm, 8) 
-
-# Add cluster labels to our dataframe
-dfm_train_clus <- cbind(dfm, Cluster = fit.km$cluster)
-dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
-dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
-dfm_train_clus_ols = dfm_train_clus[c("Age","Gender1F2M","K0.5","Cluster","totaltime")]
-
-#Train a model including the clusters as a factor (and all possible interaction variables.) 
-clus_model = lm(totaltime~.^2,data=dfm_train_clus_ols) 
-
-#Cross validate, to see how accurate it is on our training dataset  
-score <- c()
-for (i in 1:k) {
-  train = dfm_train_clus_ols[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
-  test = dfm_train_clus_ols[folds[i,"test_start"]:folds[i,"test_end"],]
-  
-  cvmodel = lm(totaltime~.^2,data=dfm_train_clus_ols)
-  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
-}
-sqrt(mean(score)) # were about 7.2 min off, with looks like a great improvment
-summary(clus_model)
-
-# However, for this model to be useful, we need to be able to accurate 
-# identify a runner’s cluster without their finish time. 
-
-# Warning -- takes a couple of minutes to run on the whole dateset. 
-library(kernlab)
-dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
-svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
-svm  #error rate is about 30%
-
-# Now, let’s return to our validation set (the 10% of the dataset we 
-# reserved at the beginning and see how good our model does when we 
-# don’t know what cluster a runner belongs to coming in) 
-
-#Assign clusters to test set based on svp 
-dfm_validate$Cluster = predict(svm,dfm_validate )
-
-test_score = sum((dfm_validate$totaltime - predict(clus_model,new=dfm_validate))^2) / as.numeric(nrow(dfm_validate))
-plot(dfm_validate$totaltime, predict(clus_model,new=dfm_validate))
-sqrt(test_score) 
-
-#On the test set, we're off by about 17 min -- not so good! 
-
-# Let's try our model on the Chicago data and see how well it works on a different race 
-
-#import data from the Chicago marathons 
-dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
-dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
-dfChi <- rbind(dfChi14,dfChi15)
-dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M)
-Chitimes = as.matrix(dfChi[,7:15], ncol=9)
-dfChi$totaltime = rowSums(Chitimes)
-dfChi$logtotaltime = log(dfChi$totaltime)
-dfChi = dfChi[!is.na(dfm$totaltime), ]
-
-#Draw a random sample 
-ChicagoSample = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
-
-#Assign clusters to test set based on svm 
-ChicagoSample$Cluster = predict(svm,ChicagoSample)
-
-Chicago_score = sum((ChicagoSample$totaltime - predict(clus_model,new=ChicagoSample))^2) / as.numeric(nrow(ChicagoSample))
-sqrt(Chicago_score) #12 min 
-plot(ChicagoSample$totaltime, predict(clus_model,new=ChicagoSample))
