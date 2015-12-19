@@ -158,8 +158,7 @@ for (i in 1:k) {
 score.mean = mean(score)
 ```
 
-We ran a simple OLS regression using all the Boston data. The predictor variables were age, gender (as factor), and 5k split time. The response variable
-is the finish time in minutes.
+We ran a simple OLS regression model using all the Boston data. The predictor variables were age, gender (as a factor), and 5k split time. The response variable was the finish time in minutes.
 
 The baseline model was quite good, but we felt we could do better.
 
@@ -167,10 +166,9 @@ The baseline model was quite good, but we felt we could do better.
 summary(base.mod)
 ```
 
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)`
-or approximately `r as.integer(sqrt(score.mean))` minutes.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean)` or approximately `r as.integer(sqrt(score.mean))` minutes.
 While $\pm$ `r as.integer(sqrt(score.mean))` minutes over the course of a four hour race may not seem like a large error,
-it makes a significant difference in terms of ability to qualify for Boston.
+$\pm$ `r as.integer(sqrt(score.mean))` minutes could be the difference between qualifying and not qualifying for a competitive race such as the Boston Marathon. 
 
 ## Examination of the Data and Transformations
 
@@ -181,18 +179,16 @@ hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
 hist(log(dfm$totaltime),breaks=50, main="Log Transformed", xlab="Finish time (min)")
 ```
 
-The untransformed data appears slightly right skewed. A log transformation of the response variable would result in a more normal distribution.
+The untransformed data appeared to be slightly right skewed. A log transformation of the response variable would result in a more normal distribution.
 
-We then examined the base model regression diagnostics such as residuals vs. predicted, Cook's Distance, heteroskedasticity.
+We then examined the base model regression diagnostics such as residuals vs. predicted, Cook’s Distance, and heteroskedasticity.
 
 ```{r echo=FALSE,fig.height=5,fig.width=6}
 par(mfrow=c(2,2))
 plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
 
-Given the right tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right skewness of the finish time histogram,
-we elected to perform a log transformation of the response variable.
-
+Given the right-tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right-skewness of the finish time histogram, we elected to perform a log transformation on the response variable.
 
 ```{r echo=FALSE}
 # Try regression on log(response)
@@ -213,14 +209,11 @@ score.mean = mean(score)
 
 ```
 
-
-Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)`
-or approximately `r as.integer(sqrt(score.mean))` minutes, a neglible improvement.
+Using $k$-Fold cross validation, and taking the sum of squares error for each fold resulted in a log-transformed mean score of `r as.integer(score.mean)` or approximately `r as.integer(sqrt(score.mean))` minutes, a negligible improvement.
 
 $R^2$ went from `r summary(base.mod)$r.squared` to `r summary(tx.mod)$r.squared`, a slight improvement. Adjusted $R^2$ improved by an equally small amount.
 
-We also attempted a range of polynominal transformations of the 5K time using an exponent in the range [1.0,2.5] but this did not improve model accuracy
-significantly. For report brevity, these results have been omitted but are available upon request (and can be found in the project GitHub site - See Appendix B).
+We also attempted a range of polynomial transformations on the 5K times using an exponent in the range [1.0,2.5]. However, this did not improve model’s accuracy significantly. We have omitted these results in order to be concise within the report, but they are available on our project GitHub site (See Appendix B).
 
 ## Clustering the Data into Subgroups
 
@@ -265,8 +258,7 @@ or $\pm$ `r as.integer(sqrt(overallclustererror[maxclusters - minclusters + 1]))
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
 ```
 
-Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number
-of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
+Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
 `r as.integer(sqrt(overallclustererror[6]))` min, which is approximately half the error as compared to unclustered linear regression.
 
 

@@ -60,6 +60,12 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
+
+#Set aside 10% of our data as a validation set 
+indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
+dfm_validate = dfm[indexes,]
+dfm = dfm[-indexes,]
+
 # Remove outliers (5k > 3 sigma from mean)
 hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
 mean5k = mean(dfm$K0.5)
@@ -142,3 +148,66 @@ plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV E
 #library(fpc)
 #plotcluster(dfm, fit.km$cluster)
 ## 
+
+num_clusters = 8 
+fit.km <- kmeans(dfm, num_clusters) 
+
+dfm_train_clus <- cbind(dfm, Cluster = fit.km$cluster)
+dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
+dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
+dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
+dfm_train_clus_ols = dfm_train_clus[c("Age","Gender1F2M","K0.5","Cluster","totaltime")]
+
+clus_model = lm(totaltime~.^2,data=dfm_train_clus_ols) 
+
+score <- c()
+for (i in 1:k) {
+  train = dfm_train_clus_ols[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
+  test = dfm_train_clus_ols[folds[i,"test_start"]:folds[i,"test_end"],]
+  
+  cvmodel = lm(totaltime~.^2,data=dfm_train_clus_ols)
+  score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
+}
+sqrt(mean(score))
+# were about 7.2 min off, with looks like a great improvment
+summary(clus_model)
+
+# This is where we try to train our support vector machine on our 
+# previously identified clusters. Warning -- takes a couple of minutes to run on whole dateset. 
+svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
+svm 
+
+#Assign clusters to test set based on svp 
+dfm_validate$Cluster = predict(svm,dfm_validate )
+
+test_score = sum((dfm_validate$totaltime - predict(clus_model,new=dfm_validate))^2) / as.numeric(nrow(dfm_validate))
+plot(dfm_validate$totaltime, predict(clus_model,new=dfm_validate))
+
+sqrt(test_score) #On the test set, we're off by about 17 min -- not so good! 
+
+# Let's try our model on the Chicago data 
+#import data from the Chicago marathons 
+
+dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
+dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
+dfChi <- rbind(dfChi14,dfChi15)
+
+dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M)
+
+Chitimes = as.matrix(dfChi[,7:15], ncol=9)
+
+dfChi$totaltime = rowSums(Chitimes)
+dfChi$logtotaltime = log(dfChi$totaltime)
+dfChi = dfChi[!is.na(dfm$totaltime), ]
+
+#Draw a random sample 
+ChicagoSample = dfChi[sample(nrow(df), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
+#Assign clusters to test set based on svp 
+ChicagoSample$Cluster = predict(svm,ChicagoSample)
+
+Chicago_score = sum((ChicagoSample$totaltime - predict(clus_model,new=ChicagoSample))^2) / as.numeric(nrow(ChicagoSample))
+sqrt(Chicago_score) #12 min 
+plot(ChicagoSample$totaltime, predict(clus_model,new=ChicagoSample))
+
+
+
