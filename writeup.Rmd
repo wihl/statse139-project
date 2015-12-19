@@ -81,11 +81,6 @@ dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
-#Set aside 10% of our data as a validation set 
-indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
-validate_dfm = dfm[indexes,]
-dfm = dfm[-indexes,]
-
 ```
 
 ## Objectives and Motivation
@@ -134,6 +129,19 @@ Throughout we will be using 10-fold cross validation testing with sum of squares
 ## Data Cleansing
 
 Even though we downloaded our primary data from another study where the researchers had already performed some scrubbing, we needed to perform additional data cleansing to format the data for our needs. As our response variable (finish times) was calculated as a sum of a runners individual split times, we needed to eliminate, rather than impute, any rows that were missing any split times as their inclusion might have tainted the predictive model. Since we were using $k$-Fold cross-validation, we randomized the order of the data to ensure that each fold had a reasonable sample size. Finally, gender had a value of {1, 2} which we had to convert into a factor in R.
+
+### Set aside a validation set. 
+
+In order to maintain the ability confirm the accuracy of our final model on unseen data, we set-aside 10% of our dataset as a validation set.  
+
+```{r echo=FALSE}
+#Set aside 10% of our data as a validation set 
+indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
+validate_dfm = dfm[indexes,]
+dfm = dfm[-indexes,]
+
+```
+
 
 ### Removing Outliers
 
