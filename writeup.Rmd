@@ -407,10 +407,14 @@ predict.finish <- function(df) {
 
 # Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
 assign.SSE <- function(df){
+  y.hat.base = predict(base.mod,new=df)
+  y.hat.half = predict(base.mod.half,new=df)
+  
+  base.mod.SSE <- as.integer(sqrt(sum((y.hat.base - df$totaltime)^2) / nrow(df)))
+  half.mod.SSE <- as.integer(sqrt(sum((y.hat.half - df$totaltime)^2) / nrow(df)))
   clus.mod.SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
-  y.hat = predict(base.mod,new=df)
-  base.mod.SSE <- as.integer(sqrt(sum((y.hat - df$totaltime)^2) / nrow(df)))
-  return (list("clus.mod" = clus.mod.SSE, "base.mod" = base.mod.SSE))
+
+  return (list("base.mod" = base.mod.SSE,"half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
 } 
 
 # Test on Chicago sameple 
