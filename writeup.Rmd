@@ -80,6 +80,12 @@ dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5","HalfMar")] # keep only column
 dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
+
+#Set aside 10% of our data as a validation set 
+indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
+validate_dfm = dfm[indexes,]
+dfm = dfm[-indexes,]
+
 ```
 
 ## Objectives and Motivation
