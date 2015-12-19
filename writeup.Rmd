@@ -358,11 +358,12 @@ for (i in 1:length(fit.km$size)) {
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
 dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
 dfChi <- rbind(dfChi14,dfChi15)
-### dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # needs to stay numeric for cluster assignment
+dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # added converter to assign.cluster to handle gender as factor
 Chitimes = as.matrix(dfChi[,7:15], ncol=9)
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
 dfChi = dfChi[!is.na(dfm$totaltime), ]
+
 #Draw a random sample 
 dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
 # Remove outliers
@@ -394,12 +395,6 @@ assign.cluster <- function(df, centers) {
   return (clusters)
 }
 
-# find which cluster would be most appropriate
-dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
-
-# Run appropriate regression model for that cluster
-dfChi$Gender1F2M = as.factor(dfChi$Gender1F2M) # need to convert to factor to match model
-
 # Calculates predicted finish time using assigned cluster and cluster-specific regression models 
 predict.finish <- function(df) {
   newtot = c()
@@ -411,25 +406,27 @@ predict.finish <- function(df) {
 
 # Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
 assign.SSE <- function(df){
-  SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
+  clus.mod.SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
   y.hat = predict(base.mod,new=df)
-  SSE2 = as.integer(sqrt(sum((y.hat - df$totaltime)^2) / nrow(df)))
-  return (list("clus.mod" = SSE, "base.mod" = SSE))
+  base.mod.SSE <- as.integer(sqrt(sum((y.hat - df$totaltime)^2) / nrow(df)))
+  return (list("clus.mod" = clus.mod.SSE, "base.mod" = base.mod.SSE))
 } 
 
-#Test on Chicago sameple 
+# Test on Chicago sameple 
+# find which cluster would be most appropriate
+dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+
+# Caculate prediction error 
 SSE.Chi = assign.SSE(dfChi)
 
 # Test on our validation set: 
-
 validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
 SSE.Bos.validate = assign.SSE(validate_dfm)
-
 
 ```
 To evaluate the robustness of our model, we attempted to verify the predictability of the model to a different marathon. The Chicago marathon does not require qualification and is a flatter course.
 
-The SSE using clustering and individual regression models is `r SSE`. Using the Boston Marathon baseline linear regression is `r SSE2`. So this model does not generalize well to a marathon with a different profile. 
+The SSE using clustering and individual regression models is `r SSE.Chi$clus.mod`. Using the Boston Marathon baseline linear regression is `r SSE.Chi$base.mod`. So this model does not generalize well to a marathon with a different profile. 
 
 ## Conclusion and Next Steps
 
