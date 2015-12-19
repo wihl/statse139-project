@@ -61,7 +61,7 @@ agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
 
-#Set aside 10% of our data as a validation set 
+#Set aside 10% of our data as a validation dataset 
 indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
 dfm_validate = dfm[indexes,]
 dfm = dfm[-indexes,]
@@ -149,17 +149,19 @@ plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV E
 #plotcluster(dfm, fit.km$cluster)
 ## 
 
-num_clusters = 8 
-fit.km <- kmeans(dfm, num_clusters) 
+#Should we be saving this model above and reusing it? I know KNN is not deterministic but it does not seem to matter in pratice
+fit.km <- kmeans(dfm, 8) 
 
+# Add cluster labels to our dataframe
 dfm_train_clus <- cbind(dfm, Cluster = fit.km$cluster)
 dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
 dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
-dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
 dfm_train_clus_ols = dfm_train_clus[c("Age","Gender1F2M","K0.5","Cluster","totaltime")]
 
+#Train a model including the clusters as a factor (and all possible interaction variables.) 
 clus_model = lm(totaltime~.^2,data=dfm_train_clus_ols) 
 
+#Cross validate, to see how accurate it is on our training dataset  
 score <- c()
 for (i in 1:k) {
   train = dfm_train_clus_ols[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
@@ -168,46 +170,49 @@ for (i in 1:k) {
   cvmodel = lm(totaltime~.^2,data=dfm_train_clus_ols)
   score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
-sqrt(mean(score))
-# were about 7.2 min off, with looks like a great improvment
+sqrt(mean(score)) # were about 7.2 min off, with looks like a great improvment
 summary(clus_model)
 
-# This is where we try to train our support vector machine on our 
-# previously identified clusters. Warning -- takes a couple of minutes to run on whole dateset. 
+# However, for this model to be useful, we need to be able to accurate 
+# identify a runner’s cluster without their finish time. 
+
+# Warning -- takes a couple of minutes to run on the whole dateset. 
+library(kernlab)
+dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
 svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
-svm 
+svm  #error rate is about 30%
+
+# Now, let’s return to our validation set (the 10% of the dataset we 
+# reserved at the beginning and see how good our model does when we 
+# don’t know what cluster a runner belongs to coming in) 
 
 #Assign clusters to test set based on svp 
 dfm_validate$Cluster = predict(svm,dfm_validate )
 
 test_score = sum((dfm_validate$totaltime - predict(clus_model,new=dfm_validate))^2) / as.numeric(nrow(dfm_validate))
 plot(dfm_validate$totaltime, predict(clus_model,new=dfm_validate))
+sqrt(test_score) 
 
-sqrt(test_score) #On the test set, we're off by about 17 min -- not so good! 
+#On the test set, we're off by about 17 min -- not so good! 
 
-# Let's try our model on the Chicago data 
+# Let's try our model on the Chicago data and see how well it works on a different race 
+
 #import data from the Chicago marathons 
-
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
 dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
 dfChi <- rbind(dfChi14,dfChi15)
-
 dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M)
-
 Chitimes = as.matrix(dfChi[,7:15], ncol=9)
-
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
 dfChi = dfChi[!is.na(dfm$totaltime), ]
 
 #Draw a random sample 
-ChicagoSample = dfChi[sample(nrow(df), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
-#Assign clusters to test set based on svp 
+ChicagoSample = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
+
+#Assign clusters to test set based on svm 
 ChicagoSample$Cluster = predict(svm,ChicagoSample)
 
 Chicago_score = sum((ChicagoSample$totaltime - predict(clus_model,new=ChicagoSample))^2) / as.numeric(nrow(ChicagoSample))
 sqrt(Chicago_score) #12 min 
 plot(ChicagoSample$totaltime, predict(clus_model,new=ChicagoSample))
-
-
-
