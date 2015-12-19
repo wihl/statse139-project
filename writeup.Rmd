@@ -58,14 +58,6 @@ create_folds = function (df, k){
 }
 
 
-assign.cluster <- function(x, centers) {
-  # compute squared euclidean distance from each sample to each cluster center
-  tmp <- sapply(seq_len(nrow(x)),
-                function(i) apply(centers, 1,
-                                  function(v) sum((x[i, ]-as.numeric(v))^2)))
-  max.col(-t(tmp))  # find index of min distance
-}
-
 # we'll do 10-fold cross validation
 k = 10 
 
@@ -356,8 +348,9 @@ clust.mod = c()
 for (i in 1:length(fit.km$size)) {
   df = dfm[which(dfm$cluster==i), ]
   df = df[c("Age","Gender1F2M","K0.5","totaltime")]
-  clust.mod[i] = lm(totaltime~.,data=df)
+  clust.mod[[i]] = lm(totaltime~.,data=df)
 }
+
 
 # Validating model against Chicago Marathon
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
@@ -369,21 +362,54 @@ dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
 dfChi = dfChi[!is.na(dfm$totaltime), ]
 #Draw a random sample 
-dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
+dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
 # Remove outliers
 mean5k = mean(dfChi$K0.5)
 sd5k = sd(dfChi$K0.5)
 outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
 dfChi = dfChi[!outliers5k,]
+```
+
+```{r echo=FALSE}
+assign.cluster <- function(df, centers) {
+  # compute squared euclidean distance from each sample to each cluster center
+  # There is probably a vectorized way of doing this.
+  cols = c("Age","Gender1F2M","K0.5")
+  clusters = c()
+  for (i in 1:nrow(df)){
+    diff = c()
+    for (j in 1:nrow(centers) ){
+      y = centers[j,cols]
+      x = as.matrix(df[i,cols])
+      diff[j] = sum((x-y)^2)
+    }
+    clusters[i] = which.min(diff)
+  }
+  return (clusters)
+}
 
 # find which cluster would be most appropriate
 dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
 
+# Run appropriate regression model for that cluster
+dfChi$Gender1F2M = as.factor(dfChi$Gender1F2M) # need to convert to factor to match model
+newtot = c()
+for (n in 1:nrow(dfChi)) {
+   newtot[n] = predict(clust.mod[[dfChi[n,"cluster"]]], newdata=dfChi[n,])
+}
+
+SSE = as.integer(sqrt(sum((newtot - dfChi$totaltime)^2) / nrow(dfChi)))
+
+y.hat.chi = predict(base.mod,new=dfChi)
+SSE2 = as.integer(sqrt(sum((y.hat.chi - dfChi$totaltime)^2) / nrow(dfChi)))
 ```
 To evaluate the robustness of our model, we attempted to verify the predictability of the model to 
 a different marathon. The Chicago marathon does not require qualification and is a flatter course.
 
-
+The SSE using clustering and individual regression models is `r SSE`. Using 
+the Boston Marathon baseline linear regression is `r SSE2`. 
+So this model does not generalize well to a marathon 
+with a different profile. 
 
 ## Conclusion and Next Steps
 
@@ -398,8 +424,11 @@ Log(y) Transform 5k       `r as.integer(sqrt(score.mean.tx))`
 
 By subsetting the data, we were able to bring down the cross validation error significantly and improve the accuracy of the model.
 
+This subset model works well for the Boston Marathon, but does not appear to generalize well for different profile marathons.
+
 Potential next steps of this project include:
 
+* Elaborate the data set to build a more robust model that would apply well to multiple marathons.
 * Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)).
 * Attempt other algorithms of regression, such as Random Forests.
 * Using other split times, such as half marathon, predict the probability of a runner not finishing the race.

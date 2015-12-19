@@ -43,6 +43,7 @@ create_folds = function (df, k){
   return (data.frame(train1_start, train1_end, train2_start, train2_end, test_start, test_end))
 }
 
+
 # we'll do 10-fold cross validation
 k = 10 
 
@@ -57,6 +58,12 @@ dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5","HalfMar")] # keep only column
 dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
+
+#Set aside 10% of our data as a validation set 
+indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
+validate_dfm = dfm[indexes,]
+dfm = dfm[-indexes,]
+
 # Find mean finish time by gender
 agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
@@ -149,7 +156,6 @@ for (num_clusters in minclusters:maxclusters) {
 }
 # TODO fix x axis of plot because it is off by -2
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
-# TODO: fix 
 # Show the resulting clusters
 fit.km = kmeans(dfm, 8)
 dfm$cluster = fit.km$cluster
@@ -164,4 +170,60 @@ ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(sh
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
   geom_abline(intercept = 37, slope = 6,color="red") +
   geom_abline(intercept = 37, slope = 3,color="blue")
+# Save the different regression models per cluster
+clust.mod = c()
+for (i in 1:length(fit.km$size)) {
+  df = dfm[which(dfm$cluster==i), ]
+  df = df[c("Age","Gender1F2M","K0.5","totaltime")]
+  clust.mod[[i]] = lm(totaltime~.,data=df)
+}
+
+
+# Validating model against Chicago Marathon
+dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
+dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
+dfChi <- rbind(dfChi14,dfChi15)
+### dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # needs to stay numeric for cluster assignment
+Chitimes = as.matrix(dfChi[,7:15], ncol=9)
+dfChi$totaltime = rowSums(Chitimes)
+dfChi$logtotaltime = log(dfChi$totaltime)
+dfChi = dfChi[!is.na(dfm$totaltime), ]
+#Draw a random sample 
+dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
+# Remove outliers
+mean5k = mean(dfChi$K0.5)
+sd5k = sd(dfChi$K0.5)
+outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
+dfChi = dfChi[!outliers5k,]
+assign.cluster <- function(df, centers) {
+  # compute squared euclidean distance from each sample to each cluster center
+  # There is probably a vectorized way of doing this.
+  cols = c("Age","Gender1F2M","K0.5")
+  clusters = c()
+  for (i in 1:nrow(df)){
+    diff = c()
+    for (j in 1:nrow(centers) ){
+      y = centers[j,cols]
+      x = as.matrix(df[i,cols])
+      diff[j] = sum((x-y)^2)
+    }
+    clusters[i] = which.min(diff)
+  }
+  return (clusters)
+}
+
+# find which cluster would be most appropriate
+dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+
+# Run appropriate regression model for that cluster
+dfChi$Gender1F2M = as.factor(dfChi$Gender1F2M) # need to convert to factor to match model
+newtot = c()
+for (n in 1:nrow(dfChi)) {
+   newtot[n] = predict(clust.mod[[dfChi[n,"cluster"]]], newdata=dfChi[n,])
+}
+
+SSE = as.integer(sqrt(sum((newtot - dfChi$totaltime)^2) / nrow(dfChi)))
+
+y.hat.chi = predict(base.mod,new=dfChi)
+SSE2 = as.integer(sqrt(sum((y.hat.chi - dfChi$totaltime)^2) / nrow(dfChi)))
 ## 
