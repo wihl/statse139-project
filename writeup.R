@@ -5,6 +5,7 @@
 #
 # December 21, 2015
 
+library(ggplot2)
 
 # Common Functions
 
@@ -148,9 +149,19 @@ for (num_clusters in minclusters:maxclusters) {
 }
 # TODO fix x axis of plot because it is off by -2
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
+# TODO: fix 
 # Show the resulting clusters
-#fit.km <- kmeans(dfm, 8)
-# install.packages("fpc")
-#library(fpc)
-#plotcluster(dfm, fit.km$cluster)
+fit.km = kmeans(dfm, 8)
+dfm$cluster = fit.km$cluster
+# Create indicator variables for fast and slow runners to plot different slopes
+mean.total = mean(dfm$totaltime)
+sd.total = sd(dfm$totaltime)
+dfm$fastrunner = (dfm$totaltime < (mean.total - (2*sd.total)))
+dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
+slope.model = lm(totaltime~.,data=dfm)
+ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
+  labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
+  geom_abline(intercept = 37, slope = 6,color="red") +
+  geom_abline(intercept = 37, slope = 3,color="blue")
 ## 

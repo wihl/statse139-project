@@ -4,7 +4,9 @@ output: pdf_document
 ---
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 #################CODE from BASE###########
-dfm <- read.csv("/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+dfm <- read.csv("Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
+
+#dfm <- read.csv("/Users/poojasingh/Documents/HStatE139/git/statse139-project2/statse139-project/Previous Boston Marathon study/BAA data.txt",header=T,sep=" ")
 times = as.matrix(dfm[,7:15], ncol=9)
 dfm$totaltime = rowSums(times)
 dfm<- dfm[c("totaltime","Age","Gender1F2M","K0.5")] # keep only columns we need

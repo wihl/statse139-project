@@ -19,6 +19,7 @@ output: pdf_document
 #
 # December 21, 2015
 
+library(ggplot2)
 
 # Common Functions
 
@@ -193,8 +194,11 @@ for each fold resulted in a baseline mean score of `r as.integer(score.mean.half
 Adjusted $R^2$ improved from `r summary(base.mod)$adj.r.squared` to 
 `r summary(base.mod.half)$adj.r.squared`.
 
-Clearly, estimating the finish halfway through the race is far more accurate than the initial 5k split. While this may be useful to someone planning
-to meet the runner at the finish, we felt it would be more challenging to minimize prediction errors using the 5k split time.
+This was an expected result as closer we are to finish line, the better our predictive analytics will be, 
+hence half marathon time was a better predictor than first split time. 
+
+While this may be useful to someone planning to meet the runner at the finish, we felt it would
+be more challenging to minimize prediction errors using the 5k split time.
 
 ## Examination of the Data and Transformations
 
@@ -293,15 +297,36 @@ Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of
 
 
 ```{r echo=FALSE}
+# TODO: fix 
 # Show the resulting clusters
-#fit.km <- kmeans(dfm, 8)
-# install.packages("fpc")
-#library(fpc)
-#plotcluster(dfm, fit.km$cluster)
+fit.km = kmeans(dfm, 8)
+dfm$cluster = fit.km$cluster
+# Create indicator variables for fast and slow runners to plot different slopes
+mean.total = mean(dfm$totaltime)
+sd.total = sd(dfm$totaltime)
+dfm$fastrunner = (dfm$totaltime < (mean.total - (2*sd.total)))
+dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
+slope.model = lm(totaltime~.,data=dfm)
+ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
+  labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
+  geom_abline(intercept = 37, slope = 6,color="red") +
+  geom_abline(intercept = 37, slope = 3,color="blue")
 ```
 
-TODO: As you can see, the unsupervised learning found groupings that would have difficult if not
+As you can see, the unsupervised learning found groupings that would have difficult if not
 impossible to us to find on our own.
+
+In a given race, there are multiple categories of runners. Elite runners are significantly faster of course. Even though
+the Boston Marathon requires fast qualification times, an allowance of approximately 10% of the field 
+is made for runners who are running for a charity such as [Dana-Farber](http://www.rundfmc.org/). The charity
+runners do not need to qualify and are much slower than an average qualified runner.
+
+The number of runners two $\sigma$ faster than the mean is `r sum(dfm$fastrunner)`. There are
+`r sum(dfm$slowrunner)` runners two $\sigma$ slower than the mean. (This also confirms our earlier
+right skewness to the data).
+
+
 
 ## Conclusion and Next Steps
 
@@ -320,6 +345,7 @@ Potential next steps of this project include:
 
 * Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)).
 * Attempt other algorithms of regression, such as Random Forests.
+* Using other split times, such as half marathon, predict the probability of a runner not finishing the race.
 * Making the prediction model available on a public website using R/Shiny. We fill that our prediction model is far more
 accurate than what is currently available to runners.
 
@@ -339,10 +365,6 @@ The following is the code used to prepare this report:
 This entire project code including source data can be found on GitHub ([https://github.com/wihl/statse139-project](https://github.com/wihl/statse139-project))
 
 [K-Means Clustering in R Sample Code](https://datayo.wordpress.com/2015/05/06/using-k-means-to-cluster-wine-dataset/)
-
-### R Packages Used
-
-[fpc](https://cran.r-project.org/web/packages/fpc/fpc.pdf) used to plot clusters
 
 ### Solutions Found on StackOverflow
 
