@@ -314,8 +314,8 @@ ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(sh
   geom_abline(intercept = 37, slope = 3,color="blue")
 ```
 
-As you can see, the unsupervised learning found groupings that would have difficult if not
-impossible to us to find on our own.
+As you can see, the unsupervised learning found groupings, especially in the dense middle of the field
+that would have difficult if not impossible to us to find on our own.
 
 In a given race, there are multiple categories of runners. Elite runners are significantly faster of course. Even though
 the Boston Marathon requires fast qualification times, an allowance of approximately 10% of the field 
@@ -324,7 +324,8 @@ runners do not need to qualify and are much slower than an average qualified run
 
 The number of runners two $\sigma$ faster than the mean is `r sum(dfm$fastrunner)`. There are
 `r sum(dfm$slowrunner)` runners two $\sigma$ slower than the mean. (This also confirms our earlier
-right skewness to the data).
+right skewness to the data). The difference in slope for fast vs. slow runners is indicative that
+a single regression model could be improved upon.
 
 
 
