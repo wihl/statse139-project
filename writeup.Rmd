@@ -74,12 +74,7 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 ## Objectives and Motivation
 
-Boston Marathon Runners are very concerned about their finish times, moreso than many other races. Boston has a limited course size,
-constrainted by the 30' width of road in Hopkington, MA ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)).
-Due to this limitation, the B.A.A. has to be very selective in the choice of runners and has established restrictive qualifying times ([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)). In order to run
-the Boston Marathon, not only does an applicant need to run a previous qualifying marathon, but must also finish
-much faster than the typical marathoner. While other races like New York and Chicago have increased their participation size significantly
-in recent years, Boston is currently and the foreseeable future restricted to approximately 27,000 runners.
+Runners who participate in the Boston Marathon are very concerned about their finish times. The reason is simple. The Boston Athletic Association (BAA), which organizes the race each April, limits the field of participants to runners who are capable of completing a marathon in a very fast time. Starting in the 1970s, when the BAA was concerned that the race was becoming unwieldy as it had grown to include more than 1000 runners for the first time ([source](http://www.baa.org/races/boston-marathon/participant-information/qualifying/history-of-qualifying-standards.aspx)), the BAA established a set of qualifying times that runners had to meet([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)) in a previously timed marathon in order to be granted acceptance to the Boston race. With marathoning having grown tremendously in popularity over the following four decades, today race organizers are physically constrained by the 30’ width of the road in Hopkington, MA  ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)) where the race begins. While other races like New York and Chicago have increased their participation sizes significantly in recent years, Boston is currently, and will be for the foreseeable future, restricted to a size of approximately 27,000 runners. Thus, while the Boston Marathon course is considered one the harder and hiller marathon courses, the runners who participate are faster than average. The mean marathon finish time for Boston runners is significantly faster than the national averages: 
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
