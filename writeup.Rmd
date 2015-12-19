@@ -57,6 +57,15 @@ create_folds = function (df, k){
   return (data.frame(train1_start, train1_end, train2_start, train2_end, test_start, test_end))
 }
 
+
+assign.cluster <- function(x, centers) {
+  # compute squared euclidean distance from each sample to each cluster center
+  tmp <- sapply(seq_len(nrow(x)),
+                function(i) apply(centers, 1,
+                                  function(v) sum((x[i, ]-as.numeric(v))^2)))
+  max.col(-t(tmp))  # find index of min distance
+}
+
 # we'll do 10-fold cross validation
 k = 10 
 
@@ -297,7 +306,6 @@ Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of
 
 
 ```{r echo=FALSE}
-# TODO: fix 
 # Show the resulting clusters
 fit.km = kmeans(dfm, 8)
 dfm$cluster = fit.km$cluster
@@ -326,6 +334,40 @@ The number of runners two $\sigma$ faster than the mean is `r sum(dfm$fastrunner
 `r sum(dfm$slowrunner)` runners two $\sigma$ slower than the mean. (This also confirms our earlier
 right skewness to the data). The difference in slope for fast vs. slow runners is indicative that
 a single regression model could be improved upon.
+
+## Applying the Model to Chicago Data
+```{r echo=FALSE}
+# Save the different regression models per cluster
+clust.mod = c()
+for (i in 1:length(fit.km$size)) {
+  df = dfm[which(dfm$cluster==i), ]
+  df = df[c("Age","Gender1F2M","K0.5","totaltime")]
+  clust.mod[i] = lm(totaltime~.,data=df)
+}
+
+# Validating model against Chicago Marathon
+dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
+dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
+dfChi <- rbind(dfChi14,dfChi15)
+### dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # needs to stay numeric for cluster assignment
+Chitimes = as.matrix(dfChi[,7:15], ncol=9)
+dfChi$totaltime = rowSums(Chitimes)
+dfChi$logtotaltime = log(dfChi$totaltime)
+dfChi = dfChi[!is.na(dfm$totaltime), ]
+#Draw a random sample 
+dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime")]
+# Remove outliers
+mean5k = mean(dfChi$K0.5)
+sd5k = sd(dfChi$K0.5)
+outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
+dfChi = dfChi[!outliers5k,]
+
+# find which cluster would be most appropriate
+dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
+
+```
+To evaluate the robustness of our model, we attempted to verify the predictability of the model to 
+a different marathon. The Chicago marathon does not require qualification and is a flatter course.
 
 
 
@@ -378,3 +420,5 @@ This entire project code including source data can be found on GitHub ([https://
 [R Markdown Page Break](http://stackoverflow.com/questions/25240541/how-to-add-newpage-in-rmarkdown-in-a-smart-way)
 
 [Remove Rows with NA in DataFrame](http://stackoverflow.com/questions/4862178/remove-rows-with-nas-in-data-frame) (use of complete.cases)
+
+[Assign a new datapoint to existing clusters](http://stats.stackexchange.com/questions/78322/is-there-a-function-in-r-that-takes-the-centers-of-clusters-that-were-found-and)
