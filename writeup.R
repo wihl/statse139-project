@@ -59,15 +59,15 @@ dfm$Gender1F2M = as.factor(dfm$Gender1F2M) # make gender into a factor
 dfm = dfm[!is.na(dfm$totaltime), ]  # eliminate rows with no finish times
 dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
+# Find mean finish time by gender
+agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
+men = as.integer(agg$x[2])
+women = as.integer(agg$x[1])
 #Set aside 10% of our data as a validation set 
 indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
 validate_dfm = dfm[indexes,]
 dfm = dfm[-indexes,]
 
-# Find mean finish time by gender
-agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
-men = as.integer(agg$x[2])
-women = as.integer(agg$x[1])
 # Remove outliers (5k > 3 sigma from mean)
 hist (dfm$K0.5, breaks=15, main="Distribution of 5k Split Times", xlab="5k Split Time (min)")
 mean5k = mean(dfm$K0.5)
@@ -183,11 +183,12 @@ for (i in 1:length(fit.km$size)) {
 dfChi14 <- read.csv("ChicagoScraper/Chicago2014Formated.csv",header=T)
 dfChi15 <- read.csv("ChicagoScraper/Chicago2015Formated.csv",header=T)
 dfChi <- rbind(dfChi14,dfChi15)
-### dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # needs to stay numeric for cluster assignment
+dfChi$Gender1F2M  <- as.factor(dfChi$Gender1F2M) # added converter to assign.cluster to handle gender as factor
 Chitimes = as.matrix(dfChi[,7:15], ncol=9)
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
 dfChi = dfChi[!is.na(dfm$totaltime), ]
+
 #Draw a random sample 
 dfChi = dfChi[sample(nrow(dfChi), 1000), ][c("Age","Gender1F2M","K0.5","totaltime","HalfMar")]
 # Remove outliers
@@ -200,6 +201,10 @@ assign.cluster <- function(df, centers) {
   # There is probably a vectorized way of doing this.
   cols = c("Age","Gender1F2M","K0.5")
   clusters = c()
+  # If gender in incoming DF is a factor, convert it to numeric 
+  if (is.factor(df$Gender1F2M)){
+    df$Gender1F2M <- as.numeric(levels(df$Gender1F2M))[df$Gender1F2M] 
+  }
   for (i in 1:nrow(df)){
     diff = c()
     for (j in 1:nrow(centers) ){
@@ -212,18 +217,32 @@ assign.cluster <- function(df, centers) {
   return (clusters)
 }
 
+# Calculates predicted finish time using assigned cluster and cluster-specific regression models 
+predict.finish <- function(df) {
+  newtot = c()
+  for (n in 1:nrow(df)) {
+    newtot[n] = predict(clust.mod[[df[n,"cluster"]]], newdata=df[n,])
+    }
+  return(newtot)
+}
+
+# Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
+assign.SSE <- function(df){
+  clus.mod.SSE <- as.integer(sqrt(sum((predict.finish(df) - df$totaltime)^2) / nrow(df)))
+  y.hat = predict(base.mod,new=df)
+  base.mod.SSE <- as.integer(sqrt(sum((y.hat - df$totaltime)^2) / nrow(df)))
+  return (list("clus.mod" = clus.mod.SSE, "base.mod" = base.mod.SSE))
+} 
+
+# Test on Chicago sameple 
 # find which cluster would be most appropriate
 dfChi$cluster = assign.cluster(dfChi, fit.km[["centers"]])
 
-# Run appropriate regression model for that cluster
-dfChi$Gender1F2M = as.factor(dfChi$Gender1F2M) # need to convert to factor to match model
-newtot = c()
-for (n in 1:nrow(dfChi)) {
-   newtot[n] = predict(clust.mod[[dfChi[n,"cluster"]]], newdata=dfChi[n,])
-}
+# Caculate prediction error 
+SSE.Chi = assign.SSE(dfChi)
 
-SSE = as.integer(sqrt(sum((newtot - dfChi$totaltime)^2) / nrow(dfChi)))
+# Test on our validation set: 
+validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
+SSE.Bos.validate = assign.SSE(validate_dfm)
 
-y.hat.chi = predict(base.mod,new=dfChi)
-SSE2 = as.integer(sqrt(sum((y.hat.chi - dfChi$totaltime)^2) / nrow(dfChi)))
 ## 
