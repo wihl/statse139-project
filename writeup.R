@@ -105,7 +105,6 @@ for (i in 1:k) {
   score[i] = sum((test$totaltime - predict(cvmodel,new=test))^2) / as.numeric(nrow(test))
 }
 score.mean.half = mean(score)
-## dfm$HalfMar = NULL # Added this back in so we can use it in the final comparison of models
 # Display histograms of response variable untransformed and log transformed
 par(mfrow=c(1,2))
 hist(dfm$totaltime,breaks=50, main="Untransformed", xlab="Finish time (min)")
@@ -155,7 +154,6 @@ for (num_clusters in minclusters:maxclusters) {
   # store mean error for a given k clusters
   overallclustererror[num_clusters-2] = mean(meanclustererror)
 }
-# TODO fix x axis of plot because it is off by -2
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
 # Show the resulting clusters
 fit.km = kmeans(dfm_clus, 8)
@@ -194,7 +192,7 @@ dfChi$StartHr = NULL
 dfChi$StartMin = NULL
 dfChi$totaltime = rowSums(Chitimes)
 dfChi$logtotaltime = log(dfChi$totaltime)
-#Filter out any rows with NAs -- they'll cause headachs later 
+#Filter out any rows with NAs -- they'll cause headaches later 
 dfChi = dfChi[!is.na(dfChi$totaltime), ]
 dfChi = dfChi[!is.na(dfChi$HalfMar), ]
 dfChi = dfChi[!is.na(dfChi$K0.5), ]
@@ -207,17 +205,9 @@ mean5k = mean(dfChi$K0.5)
 sd5k = sd(dfChi$K0.5)
 outliers5k = dfChi$K0.5>(mean5k + 3*sd5k)
 dfChi = dfChi[!outliers5k,]
-# Build svm Classifier 
-# dfm_train_clus <- cbind(dfm_clus, Cluster = fit.km$cluster)
-# dfm_train_clus$Cluster  <- as.factor(dfm_train_clus$Cluster)
-# dfm_train_clus$Gender1F2M  <- as.factor(dfm_train_clus$Gender1F2M)
-# dfm_train_clus_svm = dfm_train_clus[c("Age","Gender1F2M","K0.5", "Cluster")]
-# library(kernlab)
-# svm <- ksvm(Cluster ~ ., data = dfm_train_clus_svm)
-# svm 
 
 assign.cluster <- function(df, centers) {
-  # compute squared euclidean distance from each sample to each cluster center
+  # compute squared Euclidean distance from each sample to each cluster center
   # There is probably a vectorized way of doing this.
   cols = c("Age","Gender1F2M","K0.5")
   clusters = c()
@@ -276,10 +266,8 @@ validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
 SSE.Bos.validate = assign.SSE(validate_dfm)
 
 # As a final check, let’s see how our classifier does on the training data. 
-# When we remove finish time from the equation, how often does our Euclidian-distance 
+# When we remove finish time from the equation, how often does our Euclidian distance 
 # based algorithm pick the right cluster ID? 
-
-# dfm$PredictedCluster = predict(svm,dfm)  #I get about 62% correct with the svm classifer 
 
 dfm$PredictedCluster = assign.cluster(dfm, fit.km[["centers"]]) 
 predicted.cluster.accuracy  = nrow(dfm[dfm$PredictedCluster == dfm$cluster,])/nrow(dfm)
