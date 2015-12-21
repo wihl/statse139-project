@@ -163,14 +163,18 @@ mean.total = mean(dfm$totaltime)
 sd.total = sd(dfm$totaltime)
 dfm$fastrunner = (dfm$totaltime < (mean.total - (2*sd.total)))
 dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
-slope.model = lm(totaltime~.,data=dfm)
-ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
+dfm.sample = dfm[sample(nrow(dfm), 10000), ] #Use a (large) random sample of points so that this does not break PDF readers
+slope.model = lm(totaltime~.,data=dfm.sample)
+ggplot(dfm.sample, aes(x = K0.5, y = totaltime, color=factor(cluster), shape = (Gender1F2M ))) + geom_point(shape=1,alpha = 0.5 ) +
+  stat_smooth(method = lm, aes(x = K0.5, y = predict(slope.model)), se = FALSE) +
   labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 # Show the resulting clusters
-ggplot(dfm, aes(x = Age, y = K0.5, color=factor(cluster))) + geom_point(shape=1) +
-  labs(list(title = "Cluster Vs. Runner Age Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
+
+ggplot(dfm.sample, aes(x = Age, y = K0.5, color=factor(cluster), shape = (Gender1F2M ))) + geom_point( alpha=.5) +
+  labs(list(title = "Cluster Vs. Age Vs. Gender Vs. 5k Split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) 
+
 # Save the different regression models per cluster
 clust.mod = c()
 for (i in 1:length(fit.km$size)) {

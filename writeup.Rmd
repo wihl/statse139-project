@@ -340,7 +340,7 @@ a single regression model could be improved upon.
 # Show the resulting clusters
 
 ggplot(dfm.sample, aes(x = Age, y = K0.5, color=factor(cluster), shape = (Gender1F2M ))) + geom_point( alpha=.5) +
-  labs(list(title = "Cluster Vs. Runner Age Vs. Gender Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
+  labs(list(title = "Cluster Vs. Age Vs. Gender Vs. 5k Split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) 
 
 ```
@@ -459,7 +459,7 @@ The SSE using clustering and individual regression models is `r SSE.Chi$clus.mod
 ## Conclusion and Next Steps
 
 The following table summarizes our results:
-
+ 
 Method                  Mean Error Train (min)    Mean Error Validate   Mean Error Chicago 
 ------                 ------------------------  --------------------- --------------------
 Baseline 5k              `r as.integer(sqrt(score.mean.5k))`                                     `r SSE.Bos.validate$base.mod`                     `r SSE.Chi$base.mod`
@@ -469,9 +469,9 @@ Log(y) Transform 5k      `r as.integer(sqrt(score.mean.tx))`                    
 
 By subsetting the data by cluster, we were able to bring down the cross validation error significantly and improve the accuracy of the model on our training data. However, this improvement in accuracy did not carry over to our validation dataset (the 10% of race results we reserved from the Boston dataset) or the sample of data from the Chicago marathons. In fact, the clustering model had the largest error of any of the models we tested on both datasets. 
 
-We believe that two distinct forms of overfitting explain this outcome. First, it’s important to note that the cluster identifications in our training data were themselves based on groupings that aimed to minimize the Euclidean distances between age, gender, 5k split time, as well as our response variable, finish time. By building OLS regression models on the subset of race results that represented each cluster, and then analyzing the mean error rate across our cluster-specific models on the training data, a derivation of each runner’s final finish time leaked into our model as a predictor variable. This lead to an overly optimistic reduction in mean squared error when running cross validations on our training data alone. This would not be a problem if we were then able to reliably classify runners into an appropriate cluster based on our primary predictor variables alone. Unfortunately we were unable to do this with enough accuracy to add real additional predictive power to our model through estimated cluster classification. Even on the training dataset, where, because these were the exact records that our cluster definitions were developed from, we expected to see the highest levels of accuracy, our classifier was only able to correctly categorize  `r percent(predicted.cluster.accuracy)` of runners when we attempt to label them without including their final finish time in the calculation. Thus, the reduction in mean squared error we saw when running cross validations on our training data was impossible to recreate on unseen data where a runner’s cluster-classification was not known in advance. 
+We believe that two distinct forms of overfitting explain this outcome. First, it’s important to note that the cluster identifications in our training data were themselves based on groupings that aimed to minimize the euclidean distances between age, gender, 5k split time, as well as our response variable, finish time. By building OLS regression models on the subset of race results that represented each cluster, and then analyzing the mean error rate across our cluster-specific models on the training data, a derivation of each runner’s final finish time leaked into our model as a predictor variable. This lead to an overly optimistic reduction in mean squared error when running cross validations on our training data alone. This would not be a problem if we were then able to reliably classify runners into an appropriate cluster based on our primary predictor variables. Unfortunately we were unable to do this with enough accuracy to add real additional predictive power to our model through estimated cluster classification. Even on the training dataset, where, because these were the exact records that our cluster definitions were developed from, we expected to see the highest levels of accuracy, our classifier was only able to correctly categorize  `r percent(predicted.cluster.accuracy)` of runners when we attempted to label them without including their final finish time in the calculation. Thus, the reduction in mean squared error we saw when running cross validations on our training data was impossible to recreate on unseen data where a runner’s cluster-classification was not known in advance. 
 
-The second way we overfit our data has to do with the race itself.  While it does not beat our other models, the clustering model still works significantly better for the Boston validation data set than the Chicago validation set. Our clustering process may have homed in on timing characteristics that are specific to the Boston Marathon and our model does not appear to generalize well to different profile marathons.
+The second way we overfit our data has to do with the race itself. While it does not beat our other models, the clustering model still works significantly better for the Boston validation data set than the Chicago validation set. Our clustering process may have homed in on timing characteristics that are specific to the Boston Marathon and our model does not appear to generalize well to different profile marathons.
 
 Potential next steps of this project include:
 
