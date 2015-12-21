@@ -7,7 +7,7 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-      Our goal was to build an accurate model for predicting Boston Marathon finish times based on a runner’s gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Second, we compared this baseline model with a regression model that utilized a runner’s half-marathon split time in place of their 5k split time. Then, we analyzed the data and performed appropriate transformations. After transforming the data we built a third model based on a runner’s transformed finish time. For our forth model, we clustered the race results into eight different subgroups using an unsupervised learning algorithm. Using these different clusters of race results, we generated a new regression model for each subset. We then predicted a runner’s finish time using a multidimensional distance-based classifier, that first categorized new race-results into one of the previously identified clusters, and then predicted their finish time using a cluster-specific regression model. Finally, we compared the accuracy of predictions made via these four prediction methods on a validation dataset of results from the Boston marathon, and a secondary dataset of results from the Chicago Marathon.
+      Our goal was to build an accurate model for predicting Boston Marathon finish times based on a runner’s gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Second, we compared this baseline model with a regression model that utilized a runner’s half-marathon split time in place of their 5k split time. Then, we analyzed the data and performed appropriate transformations. After transforming the data we built a third model based on a runner’s transformed finish time. For our fourth model, we clustered the race results into different subgroups using an unsupervised learning algorithm. Using these different clusters of race results, we generated a new regression model for each subset. We then predicted a runner’s finish time that categorized new race-results into one of the previously identified clusters, and then predicted the finish time using a cluster-specific regression model. Finally, we compared the accuracy of predictions made via these four prediction methods on a validation dataset of results from the Boston marathon, and a secondary dataset of results from the Chicago Marathon.
 output: pdf_document
 ---
 
@@ -87,7 +87,7 @@ women = as.integer(agg$x[1])
 ```
 
 
-Mean Finish Time(min)    Men         Women
+Mean Finish Time(min)    Men          Women
 --------------------    ---------    -------
 Worldwide(*)            253           282   
 Boston(**)              `r men`             `r women`
@@ -116,7 +116,7 @@ We are attempting to build the most accurate prediction model possible on the sm
 1. Create a third regression model using the transformed explanatory variable. 
 1. Cluster the data into subgroups using a $k$-means unsupervised learning algorithm. Then, build cluster-specific regression models for each grouping of race results.
 1. Build a classifier to categorize new race results into one of the previously identified clusters. 
-1. Compare the accuracy of predictions made via our four models on a validation dataset of unseen results from the Boston Marathon and a secondary dataset of results from the Chicago Marathon. 
+1. In order to evaluate the generalization of the model, compare the accuracy of predictions made via our four models on a validation dataset of unseen results from the Boston Marathon and a secondary dataset of results from the Chicago Marathon. 
 
 Throughout we will be using 10-fold cross validation testing with sum of squares errors as the key quality metric.
 
@@ -231,6 +231,7 @@ plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
 
 Given the right-tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right-skewness of the finish time histogram, we elected to perform a log transformation on the response variable and run a new regression model. 
+
 ## Model 3: Regression on log-transformed finish times 
 ```{r echo=FALSE}
 # Try regression on log(response)
@@ -318,7 +319,6 @@ dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
 dfm.sample = dfm[sample(nrow(dfm), 10000), ] #Use a (large) random sample of points so that this does not break PDF readers
 slope.model = lm(totaltime~.,data=dfm.sample)
 ggplot(dfm.sample, aes(x = K0.5, y = totaltime, color=factor(cluster), shape = (Gender1F2M ))) + geom_point(alpha = 0.35 ) +
-  # stat_smooth(method = lm, aes(x = K0.5, y = predict(slope.model)), se = FALSE) + #Leaving commented out for now per email disccusion 
   labs(list(title = "Clustered Total time Vs. First split time Vs. Gender", x = "K0-5", y = "Total Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 ```
@@ -333,8 +333,7 @@ runners do not need to qualify and are much slower than an average qualified run
 
 The number of runners two $\sigma$ faster than the mean is `r sum(dfm$fastrunner)`. There are
 `r sum(dfm$slowrunner)` runners two $\sigma$ slower than the mean. (This also confirms our earlier
-right skewness to the data). The difference in slope for fast vs. slow runners is indicative that
-a single regression model could be improved upon.
+right skewness to the data). 
 
 ```{r echo=FALSE}
 # Show the resulting clusters
@@ -345,7 +344,7 @@ ggplot(dfm.sample, aes(x = Age, y = K0.5, color=factor(cluster), shape = (Gender
 
 ```
 
-Even when we look at the clusters without include our response variable (finish time). as we do in the chart above, at appears there are significant distinctions based on age, gender, and 5k split time that we should be able to classify runners and gain additional predictive power. 
+Even when we look at the clusters without including our response variable (finish time). as we do in the chart above, it appears there are significant distinctions based on age, gender, and 5k split time that we should be able to classify runners and gain additional predictive power. 
 
 ## Applying the Model to Chicago Data
 ```{r echo=FALSE}
@@ -456,6 +455,8 @@ To evaluate the robustness of our model, we attempted to verify the predictabili
 
 The SSE using clustering and individual regression models is `r SSE.Chi$clus.mod`. Using the Boston Marathon baseline linear regression is `r SSE.Chi$base.mod`. So this model does not generalize well to a marathon with a different profile. 
 
+\newpage
+
 ## Conclusion and Next Steps
 
 The following table summarizes our results:
@@ -471,12 +472,12 @@ By subsetting the data by cluster, we were able to bring down the cross validati
 
 We believe that two distinct forms of overfitting explain this outcome. First, it’s important to note that the cluster identifications in our training data were themselves based on groupings that aimed to minimize the euclidean distances between age, gender, 5k split time, as well as our response variable, finish time. By building OLS regression models on the subset of race results that represented each cluster, and then analyzing the mean error rate across our cluster-specific models on the training data, a derivation of each runner’s final finish time leaked into our model as a predictor variable. This lead to an overly optimistic reduction in mean squared error when running cross validations on our training data alone. This would not be a problem if we were then able to reliably classify runners into an appropriate cluster based on our primary predictor variables. Unfortunately we were unable to do this with enough accuracy to add real additional predictive power to our model through estimated cluster classification. Even on the training dataset, where, because these were the exact records that our cluster definitions were developed from, we expected to see the highest levels of accuracy, our classifier was only able to correctly categorize  `r percent(predicted.cluster.accuracy)` of runners when we attempted to label them without including their final finish time in the calculation. Thus, the reduction in mean squared error we saw when running cross validations on our training data was impossible to recreate on unseen data where a runner’s cluster-classification was not known in advance. 
 
-The second way we overfit our data has to do with the race itself. While it does not beat our other models, the clustering model still works significantly better for the Boston validation data set than the Chicago validation set. Our clustering process may have homed in on timing characteristics that are specific to the Boston Marathon and our model does not appear to generalize well to different profile marathons.
+The second way we overfit our data has to do with the race itself. While it does not beat our other models, the clustering model still works significantly better for the Boston validation data set than the Chicago validation set. Our clustering process may have homed in on timing characteristics that are specific to the Boston Marathon and our model does not appear to generalize well to a different profile marathon.
 
 Potential next steps of this project include:
 
 * Elaborate the data set to build a more robust model that would apply well to multiple marathons.
-* Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)).
+* Attempt other clustering models besides $k$-Means ([example](http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb)) while avoiding overfitting.
 * Attempt other algorithms of regression, such as Random Forests.
 * Using other split times, such as half marathon, predict the probability of a runner not finishing the race.
 * Assuming we can improve generalization, make the prediction model available on a public website using R/Shiny.

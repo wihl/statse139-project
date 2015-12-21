@@ -166,7 +166,6 @@ dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
 dfm.sample = dfm[sample(nrow(dfm), 10000), ] #Use a (large) random sample of points so that this does not break PDF readers
 slope.model = lm(totaltime~.,data=dfm.sample)
 ggplot(dfm.sample, aes(x = K0.5, y = totaltime, color=factor(cluster), shape = (Gender1F2M ))) + geom_point(alpha = 0.35 ) +
-  # stat_smooth(method = lm, aes(x = K0.5, y = predict(slope.model)), se = FALSE) + #Leaving commented out for now per email disccusion 
   labs(list(title = "Clustered Total time Vs. First split time Vs. Gender", x = "K0-5", y = "Total Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 # Show the resulting clusters
