@@ -275,4 +275,14 @@ SSE.Chi = assign.SSE(dfChi)
 validate_dfm$cluster = assign.cluster(validate_dfm, fit.km[["centers"]])
 SSE.Bos.validate = assign.SSE(validate_dfm)
 
+# As a final check, let’s see how our classifier does on the training data. 
+# When we remove finish time from the equation, how often does our Euclidian-distance 
+# based algorithm pick the right cluster ID? 
+
+# dfm$PredictedCluster = predict(svm,dfm)  #I get about 62% correct with the svm classifer 
+
+dfm$PredictedCluster = assign.cluster(dfm, fit.km[["centers"]]) 
+predicted.cluster.accuracy  = nrow(dfm[dfm$PredictedCluster == dfm$cluster,])/nrow(dfm)
+#I get about 40% correct with distance classifer  
+
 ## 
