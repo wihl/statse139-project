@@ -390,7 +390,7 @@ assign.cluster <- function(df, centers) {
   clusters = c()
   # If gender in incoming DF is a factor, convert it to numeric 
   if (is.factor(df$Gender1F2M)){
-    df$Gender1F2M <- as.numeric(levels(df$Gender1F2M))[df$Gender1F2M] 
+    df$Gender1F2M <- as.numeric(as.character(df$Gender1F2M))
   }
   for (i in 1:nrow(df)){
     diff = c()
