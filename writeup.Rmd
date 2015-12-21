@@ -7,7 +7,7 @@ author:
 - David Wihl
 date: "December 21, 2015"
 abstract: |
-      Our goal was to build an accurate model for predicting Boston Marathon finish times based on a runner’s gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Second, we compared this baseline model with a regression model that utilized a runner’s half-marathon split time in place of their 5k split time. Then, we analyzed the data and performed appropriate transformations. After transforming the data we built a third model based on a runner’s transformed finish time. For our forth model, we clustered the race results into eight different subgroups using an unsupervised learning algorithm. Using these different clusters of race results, we generated a new regression model for each subset. We then predicted a runner’s finish time using a multidimensional  distance-based classifier,that first categorized new race-results into one of the previously identified clusters, and then predicted their finish time using a cluster-specific regression model. Finally, we compared the accuracy of predictions made via these four prediction methods on a validation dataset of results from the Boston marathon, and a secondary dataset of results from the Chicago Marathon.
+      Our goal was to build an accurate model for predicting Boston Marathon finish times based on a runner’s gender, age, and the number of minutes it took for the runner to complete the first five kilometers of the race (5k split time). We first built a baseline model using untransformed linear regression. Second, we compared this baseline model with a regression model that utilized a runner’s half-marathon split time in place of their 5k split time. Then, we analyzed the data and performed appropriate transformations. After transforming the data we built a third model based on a runner’s transformed finish time. For our forth model, we clustered the race results into eight different subgroups using an unsupervised learning algorithm. Using these different clusters of race results, we generated a new regression model for each subset. We then predicted a runner’s finish time using a multidimensional distance-based classifier, that first categorized new race-results into one of the previously identified clusters, and then predicted their finish time using a cluster-specific regression model. Finally, we compared the accuracy of predictions made via these four prediction methods on a validation dataset of results from the Boston marathon, and a secondary dataset of results from the Chicago Marathon.
 output: pdf_document
 ---
 
@@ -77,7 +77,7 @@ dfm = dfm[sample(nrow(dfm)),]  # in case the data is sorted, randomize the order
 
 ## Objectives and Motivation
 
-Runners who participate in the Boston Marathon are very concerned about their finish times. The reason is simple. The Boston Athletic Association (BAA), which organizes the race each April, limits the field of participants to runners who are capable of completing a marathon in a very fast time. Starting in the 1970s, when the BAA was concerned that the race was becoming unwieldy as it had grown to include more than 1000 runners for the first time ([source](http://www.baa.org/races/boston-marathon/participant-information/qualifying/history-of-qualifying-standards.aspx)), the BAA established a set of qualifying times that runners had to meet([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)) in a previously timed marathon in order to be granted acceptance to the Boston race. With marathoning having grown tremendously in popularity over the following four decades, today race organizers are physically constrained by the 30’ width of the road in Hopkington, MA  ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)) where the race begins. While other races like New York and Chicago have increased their participation sizes significantly in recent years, Boston is currently, and will be for the foreseeable future, restricted to a size of approximately 27,000 runners. Thus, while the Boston Marathon course is considered one the harder marathon courses, the runners who participate are faster than average. The mean marathon finish time for Boston runners is significantly faster than global averages: 
+Runners who participate in the Boston Marathon are very concerned about their finish times. The reason is simple. The Boston Athletic Association (BAA), which organizes the race each April, limits the field of participants to runners who are capable of completing a marathon in a very fast time. Starting in the 1970s, when the BAA was concerned that the race was becoming unwieldy as it had grown to include more than 1000 runners for the first time ([source](http://www.baa.org/races/boston-marathon/participant-information/qualifying/history-of-qualifying-standards.aspx)), the BAA established a set of qualifying times that runners had to meet([source](http://www.baa.org/Races/Boston-Marathon/Participant-Information/Qualifying.aspx)) in a previously timed marathon in order to be granted acceptance to the Boston race. With the sport of marathoning having grown tremendously in popularity over the following four decades, today race organizers are physically constrained by the 30’ width of the road in Hopkington, MA ([source](http://www.coolrunning.com/engine/6/6_1/baa-marathon-faq.shtml)) where the race begins. While other marathons such as those in New York and Chicago have increased their participation sizes significantly in recent years, Boston is currently, and will be for the foreseeable future, restricted to a size of approximately 27,000 runners. Thus, while the Boston Marathon course is considered one the harder marathon courses, the runners who participate are faster than average. The mean marathon finish time for Boston runners is significantly faster than the global mean finish time: 
 
 ```{r echo=FALSE}
 # Find mean finish time by gender
@@ -85,7 +85,6 @@ agg = aggregate(dfm$totaltime, by=list(dfm$Gender1F2M), FUN=mean)[2]
 men = as.integer(agg$x[2])
 women = as.integer(agg$x[1])
 ```
-
 
 
 Mean Finish Time(min)    Men         Women
@@ -100,21 +99,24 @@ Boston(**)              `r men`             `r women`
 
 Boston is also known as a hilly course. Race participants who have qualified for the race in marathons featuring flat courses are sometimes challenged by New England’s rolling hills, especially those between miles 16-21, which are among the most difficult of the course. The peak of these hills is affectionately known as Heartbreak Hill.
 
-For all of these reasons plus the long history of the race, the Boston Marathon is a very prestigious event in the running community. Forecasting an accurate finish time in the race is a key motivator for runners to improve their time during the hundreds of miles of training a marathon requires.
+For all of these reasons plus the long history of the race, the Boston Marathon is a very prestigious event in the running community. Forecasting an accurate finish time in the race is a key motivator for runners seeking to accurately pace themselves during the hundreds of miles of training a marathon requires.
 
 ## Data Sources
 
-We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html) from a group of researchers at the University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticipated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due to the bombings at the finish line. This data set contained the split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/) using a custom-built scraper.
+We obtained our data from two sources. First, we downloaded a [previously assembled dataset](http://www.stat.unc.edu/faculty/rs/Bostonwebpage/readme.html) from a group of researchers at the University of North Carolina-Chapel Hill who [analyzed](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) historic runner performance with the goal of predicting the anticipated finish times for the approximately 5000 runners who were unable to complete the 2013 Boston Marathon due to the bombings at the finish line. This data set contained the split and finish times for `r nrow(dfm)` runners in the 2010, 2011, and 2013 Boston Marathons. (The 2012 Boston marathon was intentionally excluded from their dataset because it was unusually hot that year.) We also obtained finish and split times for the 78042 runners who completed the Chicago Marathon in 2014 and 2015. We obtained these results directly from the Chicago Marathon’s [results website](http://results.chicagomarathon.com/2015/) using a custom-built scraper.
 
 ## Methodology
 
 We are attempting to build the most accurate prediction model possible on the smallest amount of interesting data. We are not attempting to infer or analyze the data extensively. Our method consists of the following steps:
 
 1. Data cleansing
-1. Create a baseline regression using ordinary least squares (OLS) regression
+1. Create a baseline regression model using ordinary least squares (OLS) regression
+1. Compared this baseline model with a regression model that uses a runner’s half-marathon split time in place of their 5k split time 
 1. Analyze the data and perform appropriate transformations
-1. Cluster the data into subgroups using unsupervised learning, such as $k$-means
-1. Verify the improved accuracy of our predictions.
+1. Create a third regression model using the transformed explanatory variable 
+1. Cluster the data into subgroups using a $k$-means unsupervised learning algorithm. Then, build cluster-specific regression models for each grouping of race results.
+1. Build a classifier to categorize new race results into one of the previously identified clusters 
+1. Compare the accuracy of predictions made via our four models on a validation dataset of unseen results from the Boston Marathon and a secondary dataset of results from the Chicago Marathon 
 
 Throughout we will be using 10-fold cross validation testing with sum of squares errors as the key quality metric.
 
