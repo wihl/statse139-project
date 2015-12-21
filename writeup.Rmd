@@ -512,3 +512,5 @@ This entire project code including source data can be found on GitHub ([https://
 [Remove Rows with NA in DataFrame](http://stackoverflow.com/questions/4862178/remove-rows-with-nas-in-data-frame) (use of complete.cases)
 
 [Assign a new datapoint to existing clusters](http://stats.stackexchange.com/questions/78322/is-there-a-function-in-r-that-takes-the-centers-of-clusters-that-were-found-and)
+
+[Converting from factor to numeric in R](http://stats.stackexchange.com/questions/13065/problem-converting-from-factor-to-numeric-variable-in-r)
