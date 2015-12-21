@@ -109,25 +109,22 @@ We obtained our data from two sources. First, we downloaded a [previously assemb
 
 We are attempting to build the most accurate prediction model possible on the smallest amount of interesting data. We are not attempting to infer or analyze the data extensively. Our method consists of the following steps:
 
-1. Data cleansing
-1. Create a baseline regression model using ordinary least squares (OLS) regression
-1. Compared this baseline model with a regression model that uses a runner’s half-marathon split time in place of their 5k split time 
-1. Analyze the data and perform appropriate transformations
-1. Create a third regression model using the transformed explanatory variable 
+1. Data cleansing.
+1. Create a baseline regression model using ordinary least squares (OLS) regression.
+1. Compared this baseline model with a regression model that uses a runner’s half-marathon split time in place of their 5k split time. 
+1. Analyze the data and perform appropriate transformations.
+1. Create a third regression model using the transformed explanatory variable. 
 1. Cluster the data into subgroups using a $k$-means unsupervised learning algorithm. Then, build cluster-specific regression models for each grouping of race results.
-1. Build a classifier to categorize new race results into one of the previously identified clusters 
-1. Compare the accuracy of predictions made via our four models on a validation dataset of unseen results from the Boston Marathon and a secondary dataset of results from the Chicago Marathon 
+1. Build a classifier to categorize new race results into one of the previously identified clusters. 
+1. Compare the accuracy of predictions made via our four models on a validation dataset of unseen results from the Boston Marathon and a secondary dataset of results from the Chicago Marathon. 
 
 Throughout we will be using 10-fold cross validation testing with sum of squares errors as the key quality metric.
 
 ## Data Cleansing
 
-Even though we downloaded our primary data from another study where the researchers had already performed some scrubbing, we needed to perform additional data cleansing to format the data for our needs. As our response variable (finish times) was calculated as a sum of a runner's individual split times, we needed to eliminate, rather than impute, any rows that were missing any split times as their inclusion might have tainted the predictive model. Since we were using $k$-Fold cross validation, we randomized the order of the data to ensure that each fold had a reasonable sample size. Finally, gender had a value of {1, 2} which we had to convert into a factor in R.
+Even though we downloaded our primary data from another study where the researchers had already performed some scrubbing, we needed to perform additional data cleansing to format the data for our needs. As our response variable (finish times) was calculated as a sum of a runner's individual split times, we needed to eliminate, rather than impute, any rows that were missing any split times as their inclusion might have tainted the predictive model. Since we were using $k$-Fold cross validation, we randomized the order of the data to ensure that each fold had a reasonable sample size. Finally, gender had a value of {1, 2} which we had to convert into a factor in R. Additionally, we also transformed the Chicago dataset to match the Boston dataset in its format, removing rows that omitted split times or finish times. 
 
 ### Set aside a validation set. 
-
-In order to maintain the ability confirm the accuracy of our final model on unseen data, we set aside 10% of our Boston dataset as a validation set.  
-
 ```{r echo=FALSE}
 #Set aside 10% of our data as a validation set 
 indexes = sample(1:nrow(dfm), size=0.1*nrow(dfm))
@@ -136,6 +133,7 @@ dfm = dfm[-indexes,]
 
 ```
 
+In order to maintain the ability to confirm the accuracy of our models on unseen data, we set aside a randomly selected 10% of our Boston dataset, or `r nrow(validate_dfm)` race results, as a validation dataset. This left a dataset of `r nrow(dfm)` race results to train our four models on.
 
 ### Removing Outliers
 
@@ -157,7 +155,7 @@ As the histogram reveals, there were several outliers in the 5k split times. The
 Age was in the range [18,81]. (The minimum age to run the Boston Marathon is 18). No outliers were removed. Males represented `r percent(malepct)` 
 of total runners, which seemed reasonable.
 
-## Baseline Regression - 5K Split
+## Model 1: Baseline Regression - 5K Split
 ```{r echo=FALSE, results="hide"}
 # Create a set of k-fold sets for cross-validation
 folds = create_folds(dfm,k)
@@ -179,7 +177,7 @@ score.mean.5k = mean(score)
 
 We ran a simple OLS regression model using the training portion of our Boston data. The predictor variables were age, gender (as a factor), and 5k split time. The response variable was the finish time in minutes.
 
-The baseline model was quite good, but we felt we could do better.
+The baseline model was quite good, but we suspected we could do better.
 
 ```{r echo=FALSE}
 summary(base.mod)
@@ -189,7 +187,7 @@ Using $k$-Fold cross validation, and taking the sum of squares error for each fo
 While $\pm$ `r as.integer(sqrt(score.mean.5k))` minutes over the course of a four hour race may not seem like a large error,
 $\pm$ `r as.integer(sqrt(score.mean.5k))` minutes could be the difference between qualifying and not qualifying for a competitive race such as the Boston Marathon. 
 
-## Baseline Regression - Half Marathon Split
+## Model 2: Baseline Regression - Half Marathon Split
 ```{r echo=FALSE, results="hide"}
 # Half Marathon Baseline regression
 base.mod.half = lm(totaltime~.-K0.5,data=dfm)
@@ -204,18 +202,15 @@ for (i in 1:k) {
 score.mean.half = mean(score)
 ```
 
-As a comparison, we also ran a regression using half marathon instead of 5k split time. The sum of squares error
-for each fold resulted in a baseline mean score of `r as.integer(score.mean.half)` or approximately 
+As a comparison, we also ran a regression using a runners half marathon split time inplace of their 5k split time. The sum of squares error for each fold resulted in a baseline mean score of `r as.integer(score.mean.half)` or approximately 
 `r as.integer(sqrt(score.mean.half))` minutes, a significant improvement. $R^2$ went from
 `r summary(base.mod)$r.squared` to `r summary(base.mod.half)$r.squared`. 
 Adjusted $R^2$ improved from `r summary(base.mod)$adj.r.squared` to 
 `r summary(base.mod.half)$adj.r.squared`.
 
-This was an expected result as closer we are to finish line, the better our predictive analytics will be, 
-hence half marathon time was a better predictor than the 5k split time. 
+This was an expected result as the closer a runner is to the finish line, the easier it is to predict their final finish time. Thus, it’s not surprising that a  half marathon time was a better predictor than the 5k split time. 
 
-While this may be useful to someone planning to meet the runner at the finish, we felt it would
-be more challenging to minimize prediction errors using the 5k split time.
+While this may be useful to someone planning to meet a runner at the finish line, we felt it would be more challenging to minimize prediction errors using the 5k split time alone.
 
 ## Examination of the Data and Transformations
 
@@ -235,8 +230,8 @@ par(mfrow=c(2,2))
 plot(base.mod, pch=23 ,bg="seashell",cex=.8)
 ```
 
-Given the right-tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right-skewness of the finish time histogram, we elected to perform a log transformation on the response variable.
-
+Given the right-tail distribution of the QQplot, the fan out of the residuals vs. predicted, and the slight right-skewness of the finish time histogram, we elected to perform a log transformation on the response variable and run a new regression model. 
+## Model 3: Regression on log-transformed finish times 
 ```{r echo=FALSE}
 # Try regression on log(response)
 dfm$logtotaltime = log(dfm$totaltime)
@@ -265,7 +260,7 @@ a slight improvement. Adjusted $R^2$ improved by an equally small amount.
 
 We also attempted a range of polynomial transformations on the 5K times using an exponent in the range [1.1,2.5]. However, this did not improve model’s accuracy significantly. We have omitted these results in order to be concise within the report, but they are available on our project GitHub site (See Appendix B).
 
-## Clustering the Data into Subgroups
+## Model 4: Unsupervised clustering with subgroup-specific regression models 
 
 ```{r echo=FALSE,warning=FALSE, message=FALSE}
 # Clustering the Data into Subgroups
@@ -308,9 +303,8 @@ or $\pm$ `r as.integer(sqrt(overallclustererror[maxclusters - minclusters + 1]))
 plot(overallclustererror, xlab="Number of Clusters", ylab="CV Error", main="CV Error vs Number of Clusters")
 ```
 
-Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number of clusters is $k=8$, which results in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
-`r as.integer(sqrt(overallclustererror[6]))` min on tn the training dataset, which is approximately half the error as compared to unclustered linear regression. 
-
+Using the [elbow method](https://en.wikipedia.org/wiki/Determining_the_number_of_clusters_in_a_data_set), we determined that the optimal number of clusters is $k=8$, which resulted in a cross validation error of `r as.integer(overallclustererror[6])` or $\pm$ 
+`r as.integer(sqrt(overallclustererror[6]))` minutes on tn the training dataset, which is approximately half the error as compared to unclustered linear regression on the training data.
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 # Show the resulting clusters
@@ -321,8 +315,10 @@ mean.total = mean(dfm$totaltime)
 sd.total = sd(dfm$totaltime)
 dfm$fastrunner = (dfm$totaltime < (mean.total - (2*sd.total)))
 dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
-slope.model = lm(totaltime~.,data=dfm)
-ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
+dfm.sample = dfm[sample(nrow(dfm), 10000), ] #Use a (large) random sample of points so that this does not break PDF readers
+slope.model = lm(totaltime~.,data=dfm.sample)
+ggplot(dfm.sample, aes(x = K0.5, y = totaltime, color=factor(cluster), shape = (Gender1F2M ))) + geom_point(shape=1,alpha = 0.5 ) +
+  stat_smooth(method = lm, aes(x = K0.5, y = predict(slope.model)), se = FALSE) +
   labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 ```
@@ -342,9 +338,11 @@ a single regression model could be improved upon.
 
 ```{r echo=FALSE}
 # Show the resulting clusters
-ggplot(dfm, aes(x = Age, y = K0.5, color=factor(cluster))) + geom_point(shape=1) +
-  labs(list(title = "Cluster Vs. Runner Age Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
+
+ggplot(dfm.sample, aes(x = Age, y = K0.5, color=factor(cluster), shape = (Gender1F2M ))) + geom_point( alpha=.5) +
+  labs(list(title = "Cluster Vs. Runner Age Vs. Gender Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
   theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) 
+
 ```
 
 Even when we look at the clusters without include our response variable (finish time). as we do in the chart above, at appears there are significant distinctions based on age, gender, and 5k split time that we should be able to classify runners and gain additional predictive power. 
