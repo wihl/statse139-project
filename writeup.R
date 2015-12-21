@@ -117,13 +117,13 @@ dfm$logtotaltime = log(dfm$totaltime)
 folds = create_folds(dfm,k)
 score = c()
 
-tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
+tx.mod = lm(logtotaltime~.-totaltime-HalfMar,data=dfm)
 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  cv.tx.mod = lm(logtotaltime~.-totaltime -HalfMar,data=train)
+  cv.tx.mod = lm(logtotaltime~.-totaltime-HalfMar,data=train)
   score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
 }
 score.mean.tx = mean(score)
@@ -168,9 +168,7 @@ dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
 slope.model = lm(totaltime~.,data=dfm)
 ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
   labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
-  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
-  geom_abline(intercept = 37, slope = 6,color="red") +
-  geom_abline(intercept = 37, slope = 3,color="blue")
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 # Show the resulting clusters
 ggplot(dfm, aes(x = Age, y = K0.5, color=factor(cluster))) + geom_point(shape=1) +
   labs(list(title = "Cluster Vs. Runner Age Vs. First split time", x = "Runner Age", y = "5k Split Time", colour="Cluster")) +
@@ -244,11 +242,11 @@ predict.finish <- function(df) {
   newtot = c()
   for (n in 1:nrow(df)) {
     newtot[n] = predict(clust.mod[[df[n,"cluster"]]], newdata=df[n,])
-    }
+  }
   return(newtot)
 }
 
-# Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
+# Calculate sum of squared errors (SSE) on submitted DF for both baseline model and clustered model 
 assign.SSE <- function(df){
   
   y.hat.base = predict(base.mod,new=df)
@@ -264,7 +262,7 @@ assign.SSE <- function(df){
   return (list("base.mod" = base.mod.SSE, "log.mod"=log.mod.SSE, "half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
 } 
 
-# Test on Chicago sameple 
+# Test on Chicago sample 
 # find which cluster would be most appropriate
 # dfChi$Cluster = predict(svm,dfChi )
 

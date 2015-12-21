@@ -1,0 +1,15 @@
+---
+title: "tabletest."
+author: "David Wihl"
+date: "December 20, 2015"
+output: pdf_document
+---
+
+Method                  Mean Error Train (min)    Mean Error Validate   Mean Error Chicago 
+------                 ------------------------  --------------------- --------------------
+Baseline 5k               15                              15                   23
+Baseline Half Marathon    10                              10                   15
+Log(y) Transform 5k       15                              15                   25
+8-Fold Cluster            8                               25                   45
+
+

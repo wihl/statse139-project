@@ -242,13 +242,13 @@ dfm$logtotaltime = log(dfm$totaltime)
 folds = create_folds(dfm,k)
 score = c()
 
-tx.mod = lm(logtotaltime~.-totaltime,data=dfm)
+tx.mod = lm(logtotaltime~.-totaltime-HalfMar,data=dfm)
 
 for (i in 1:k) {
   train = dfm[c(folds[i,"train1_start"]:folds[i,"train1_end"],folds[i,"train2_start"]:folds[i,"train2_end"]),]
   test = dfm[folds[i,"test_start"]:folds[i,"test_end"],]
 
-  cv.tx.mod = lm(logtotaltime~.-totaltime -HalfMar,data=train)
+  cv.tx.mod = lm(logtotaltime~.-totaltime-HalfMar,data=train)
   score[i] = sum((test$totaltime - exp(predict(cv.tx.mod,new=test)))^2) / as.numeric(nrow(test))
 }
 score.mean.tx = mean(score)
@@ -324,9 +324,7 @@ dfm$slowrunner = (dfm$totaltime > (mean.total + (2*sd.total)))
 slope.model = lm(totaltime~.,data=dfm)
 ggplot(dfm, aes(x = K0.5, y = totaltime, color=factor(cluster))) + geom_point(shape=1) +
   labs(list(title = "Clustered Total time Vs. First split time", x = "K0-5", y = "Total Time", colour="Cluster")) +
-  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold")) +
-  geom_abline(intercept = 37, slope = 6,color="red") +
-  geom_abline(intercept = 37, slope = 3,color="blue")
+  theme(legend.title = element_text(size=6, face="bold") , title = element_text(size=8, face="bold"))
 ```
 
 As you can see, the unsupervised learning found groupings, especially in the dense middle of the field
@@ -428,11 +426,11 @@ predict.finish <- function(df) {
   newtot = c()
   for (n in 1:nrow(df)) {
     newtot[n] = predict(clust.mod[[df[n,"cluster"]]], newdata=df[n,])
-    }
+  }
   return(newtot)
 }
 
-# Calculate sum of squared errors (SSE) on submited DF for both baseline model and clustered model 
+# Calculate sum of squared errors (SSE) on submitted DF for both baseline model and clustered model 
 assign.SSE <- function(df){
   
   y.hat.base = predict(base.mod,new=df)
@@ -448,7 +446,7 @@ assign.SSE <- function(df){
   return (list("base.mod" = base.mod.SSE, "log.mod"=log.mod.SSE, "half.mod" = half.mod.SSE ,"clus.mod" = clus.mod.SSE))
 } 
 
-# Test on Chicago sameple 
+# Test on Chicago sample 
 # find which cluster would be most appropriate
 # dfChi$Cluster = predict(svm,dfChi )
 
@@ -470,12 +468,12 @@ The SSE using clustering and individual regression models is `r SSE.Chi$clus.mod
 
 The following table summarizes our results:
 
-Method                    Mean Error Train (min)                        Mean Error Validate             Mean Error Chicago 
-------                    ----------------                              -------------------------       -------------------
-Baseline 5k               `r as.integer(sqrt(score.mean.5k))`           `r SSE.Bos.validate$base.mod`   `r SSE.Chi$base.mod`
-Baseline Half Marathon    `r as.integer(sqrt(score.mean.half))`         `r SSE.Bos.validate$half.mod`   `r SSE.Chi$half.mod`
-Log(y) Transform 5k       `r as.integer(sqrt(score.mean.tx))`           `r SSE.Bos.validate$log.mod`    `r SSE.Chi$log.mod`
-8-Fold Cluster            `r as.integer(sqrt(overallclustererror[6]))`  `r SSE.Bos.validate$clus.mod`   `r SSE.Chi$clus.mod`
+Method                  Mean Error Train (min)    Mean Error Validate   Mean Error Chicago 
+------                 ------------------------  --------------------- --------------------
+Baseline 5k              `r as.integer(sqrt(score.mean.5k))`                                     `r SSE.Bos.validate$base.mod`                     `r SSE.Chi$base.mod`
+Baseline Half Marathon   `r as.integer(sqrt(score.mean.half))`                                   `r SSE.Bos.validate$half.mod`                     `r SSE.Chi$half.mod` 
+Log(y) Transform 5k      `r as.integer(sqrt(score.mean.tx))`                                     `r SSE.Bos.validate$log.mod`                      `r SSE.Chi$log.mod`
+8-Fold Cluster           `r as.integer(sqrt(overallclustererror[6]))`                            `r SSE.Bos.validate$clus.mod`                     `r SSE.Chi$clus.mod`
 
 By sub setting the data by cluster, we were able to bring down the cross validation error significantly and improve the accuracy of the model on our training data. However, this improvement in accuracy did not carry over to our validation dataset (the 10% of race results we reserved from the Boston dataset) or the sample of data from the Chicago marathons. In fact, the clustering model had the largest error of any of the models we tested on both datasets. 
 
